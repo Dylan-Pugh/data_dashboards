@@ -1,0 +1,13 @@
+Head,Body,Primary Type,Secondary Type,Hp,Attack,Defense,Special Attack,Special Defense,Speed,Bst,Normal Resistances,Super Resistances,Immunities,Normal Weaknesses,Super Weaknesses,Total Resistances,Total Weaknesses,Effective Delta
+mew,gengar,psychic,ghost,86,76,73,110,91,106,542,"psychic, poison",,"normal, fighting",,"dark, ghost",4,2,2
+gengar,mew,ghost,psychic,73,88,86,120,83,103,553,"psychic, poison",,"normal, fighting",,"dark, ghost",4,2,2
+mewtwo,gengar,psychic,ghost,90,80,70,146,85,116,587,"psychic, poison",,"normal, fighting",,"dark, ghost",4,2,2
+gengar,mewtwo,ghost,psychic,75,95,80,138,80,123,591,"psychic, poison",,"normal, fighting",,"dark, ghost",4,2,2
+alakazam,gengar,psychic,ghost,56,60,55,133,88,113,505,"psychic, poison",,"normal, fighting",,"dark, ghost",4,2,2
+gengar,alakazam,ghost,psychic,58,55,50,131,81,116,491,"psychic, poison",,"normal, fighting",,"dark, ghost",4,2,2
+mew,mewtwo,psychic,,102,106,93,118,96,120,635,"psychic, fighting",,,"dark, ghost, bug",,2,"dark, ghost, bug",-1
+mewtwo,mew,psychic,,104,103,96,136,93,110,642,"psychic, fighting",,,"dark, ghost, bug",,2,"dark, ghost, bug",-1
+mew,alakazam,psychic,,85,66,63,111,98,113,536,"psychic, fighting",,,"dark, ghost, bug",,2,"dark, ghost, bug",-1
+alakazam,mew,psychic,,70,83,81,123,96,106,559,"psychic, fighting",,,"dark, ghost, bug",,2,"dark, ghost, bug",-1
+mewtwo,alakazam,psychic,,89,70,60,147,91,123,580,"psychic, fighting",,,"dark, ghost, bug",,2,"dark, ghost, bug",-1
+alakazam,mewtwo,psychic,,72,90,75,141,93,126,597,"psychic, fighting",,,"dark, ghost, bug",,2,"dark, ghost, bug",-1
