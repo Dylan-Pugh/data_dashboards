@@ -1,0 +1,3 @@
+Head,Body,Primary Type,Secondary Type,Hp,Attack,Defense,Special Attack,Special Defense,Speed,Bst,Normal Resistances,Super Resistances,Immunities,Normal Weaknesses,Super Weaknesses,Total Resistances,Total Weaknesses,Effective Delta
+blissey,tyranitar,normal,dark,203,92,76,81,123,59,634,dark,0,"ghost, psychic","bug, fairy",fighting,3,3,1
+crobat,scizor,poison,bug,80,116,93,65,80,86,520,"bug, poison, fairy","fighting, grass",0,"fire, flying, rock, psychic",0,5,4,1
