@@ -20,8 +20,6 @@ repos:
         args:
           - '--max-line-length=105'
           - '--extend-ignore=E203'
-        additional_dependencies:
-          - flake8-bugbear
   - repo: 'https://github.com/codespell-project/codespell'
     rev: v2.2.2
     hooks:
