@@ -63,11 +63,6 @@ user_selection = []
 for item in selection:
     user_selection.append(item)
 
-# Display the contents of "user_selection"
-st.write('Selected:')
-for pokemon in user_selection:
-    st.write(f'- {pokemon}')
-
 if st.button('Find All Fusions'):
     fusion_functions.get_possible_fusions(user_selection, adjust_for_threat_score)
     df = pd.read_csv('fusion_dashboard/data/possible_fusions.csv')
