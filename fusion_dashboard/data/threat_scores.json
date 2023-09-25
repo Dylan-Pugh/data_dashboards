@@ -1,1 +1,20 @@
-{"fire": 1.05, "psychic": 1.03, "dragon": 1.02, "electric": 1.0, "steel": 0.98, "flying": 0.97, "ghost": 0.96, "normal": 0.96, "ground": 0.96, "dark": 0.96, "water": 0.95, "fighting": 0.93, "ice": 0.9, "grass": 0.88, "rock": 0.87, "bug": 0.84, "fairy": 0.84, "poison": 0.76}
+{
+    "fire": 1.05,
+    "psychic": 1.03,
+    "dragon": 1.02,
+    "electric": 1.0,
+    "steel": 0.98,
+    "flying": 0.97,
+    "ghost": 0.96,
+    "normal": 0.96,
+    "ground": 0.96,
+    "dark": 0.96,
+    "water": 0.95,
+    "fighting": 0.93,
+    "ice": 0.9,
+    "grass": 0.88,
+    "rock": 0.87,
+    "bug": 0.84,
+    "fairy": 0.84,
+    "poison": 0.76
+}
