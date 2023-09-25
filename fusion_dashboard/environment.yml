@@ -3,7 +3,5 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - python
-  - streamlit=1.27.0
   - plotly_express
   - pre-commit
