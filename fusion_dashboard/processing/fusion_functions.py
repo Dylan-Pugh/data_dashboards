@@ -185,7 +185,7 @@ def analyze_single_type(input_pokemon, adjust_for_threat_score:bool):
     input_pokemon['Normal_Weaknesses'] = weaknesses
     input_pokemon['Super_Weaknesses'] = None
     input_pokemon['Total_resistances'] = len(resistances)
-    input_pokemon['Total_weaknesses'] = weaknesses
+    input_pokemon['Total_weaknesses'] = len(weaknesses)
     input_pokemon['Effective_delta'] = effective_delta
 
     return input_pokemon
