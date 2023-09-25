@@ -1,7 +1,0 @@
-Head,Body,Primary Type,Secondary Type,Hp,Attack,Defense,Special Attack,Special Defense,Speed,Bst,Normal Resistances,Super Resistances,Immunities,Normal Weaknesses,Super Weaknesses,Total Resistances,Total Weaknesses,Effective Delta
-clefable,forretress,fairy,steel,88,83,117,83,80,46,497,"rock, normal, grass, dark, ice, flying, psychic, fairy",bug,"poison, dragon","fire, ground",,11,2,11
-dragonite,steelix,dragon,steel,85,101,165,85,88,46,570,"water, steel, rock, psychic, electric, flying, normal, bug",grass,poison,"ground, fighting",,10,2,9
-cofagrigus,slaking,ghost,normal,88,123,115,95,91,76,588,"poison, bug",,"ghost, normal, fighting",dark,,5,1,7
-banette,krookodile,ghost,dark,74,116,75,77,65,83,490,poison,,"normal, fighting, psychic",fairy,,4,1,6
-muk,tyranitar,poison,dark,103,124,98,75,100,57,557,"ghost, poison, grass, dark",,psychic,ground,,5,1,5
-golurk,salamence,ground,flying,91,131,80,73,80,85,540,"bug, poison, fighting",,"electric, ground",water,ice,5,2,4
