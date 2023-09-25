@@ -96,6 +96,11 @@ def build_weaknesses_scatter(input_data: pd.DataFrame):
     weakness_counts = []
     resist_or_immunity_counts = []
 
+    # Remove None values here
+    input_data['Super Weaknesses'] = input_data['Super Weaknesses'].fillna('')
+    input_data['Super Resistances'] = input_data['Super Resistances'].fillna('')
+    input_data['Immunities'] = input_data['Immunities'].fillna('')
+
     # Calculate the number of pairs weak to each type and the number of pairs that resist or are immune to each type
     for pokemon_type in types_to_consider:
         # Count pairs weak to the type
@@ -105,7 +110,6 @@ def build_weaknesses_scatter(input_data: pd.DataFrame):
         # Count pairs that resist or are immune to the type
         resist_or_immunity_to_type = input_data[input_data['Normal Resistances'].str.contains(pokemon_type, case=False, na=False) | input_data['Super Resistances'].str.contains(pokemon_type, case=False, na=False) | input_data['Immunities'].str.contains(pokemon_type, case=False, na=False)]
         resist_or_immunity_counts.append(len(resist_or_immunity_to_type))
-
 
     # Create a DataFrame for the scatter plot
     scatter_df = pd.DataFrame({'Type': types_to_consider, 'Weakness Count': weakness_counts, 'Resist Count': resist_or_immunity_counts})
@@ -125,7 +129,6 @@ def build_weaknesses_scatter(input_data: pd.DataFrame):
         color='Danger', color_continuous_scale='RdYlGn_r',
         title='Team Weaknesses vs. Resistances',
     )
-
 
     # Customize the x-axis ticks to be integers
     fig.update_xaxes(tick0=0, dtick=1)
