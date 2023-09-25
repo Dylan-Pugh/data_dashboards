@@ -5,6 +5,9 @@ from viz import display_functions
 from processing import offensive_threat_calculator
 
 
+st.set_page_config(layout='wide', page_icon=':chart_with_upwards_trend:')
+
+
 # Function to calculate and display scores
 def calculate_and_display_scores(weights, offensive_potentials):
     sorted_potentials = offensive_threat_calculator.calculate_composite_offensive_threat_score(offensive_potentials, weights)
