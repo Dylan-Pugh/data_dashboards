@@ -1,7 +1,0 @@
-name: data_dashboards
-channels:
-  - defaults
-  - conda-forge
-dependencies:
-  - plotly_express
-  - pre-commit
