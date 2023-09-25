@@ -4,6 +4,8 @@ import pandas as pd
 from viz import display_functions
 from processing import fusion_functions
 
+st.set_page_config(layout='wide', page_icon=':bar_chart:')
+
 
 def display_fusion_results(df):
     # Display table of fusions
@@ -32,17 +34,34 @@ def display_fusion_results(df):
 
 df = pd.read_csv('fusion_dashboard/data/current_dex.csv')
 
+load_team = False
+
+if os.path.exists('fusion_dashboard/data/current_team.csv'):
+    # Initialize with current data, if it exists
+    current_team = pd.read_csv('fusion_dashboard/data/current_team.csv')
+    load_team = True
+
+    default_heads = current_team['Head'].tolist()
+    default_heads = [head.capitalize() for head in default_heads]
+
+    default_bodies = current_team['Body'].tolist()
+    default_bodies = [body.capitalize() for body in default_bodies]
+
 head_options = df['NAME'].to_list()
 body_options = df['NAME'].to_list()
 
 # Here make default options current values from spreadsheet
 head_selection = st.multiselect(
     label='Select Head Pokémon',
-    options=[opt.capitalize() for opt in head_options], max_selections=6,
+    options=[opt.capitalize() for opt in head_options],
+    max_selections=6,
+    default=default_heads if default_heads else None,
 )
 body_selection = st.multiselect(
     label='Select Body Pokémon',
-    options=[opt.capitalize() for opt in body_options], max_selections=6,
+    options=[opt.capitalize() for opt in body_options],
+    max_selections=6,
+    default=default_bodies if default_bodies else None,
 )
 
 # Combine head and body selections into list of tuples
@@ -61,7 +80,5 @@ if st.button('Analyze Team'):
     df = pd.read_csv('fusion_dashboard/data/current_team.csv')
 
     display_fusion_results(df)
-elif os.path.exists('fusion_dashboard/data/current_team.csv'):
-    # Initialize with current data, if it exists
-    current_team = pd.read_csv('fusion_dashboard/data/current_team.csv')
+elif load_team:
     display_fusion_results(current_team)
