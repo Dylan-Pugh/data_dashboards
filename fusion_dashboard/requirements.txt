@@ -1,0 +1,2 @@
+plotly_express
+streamlit==1.27.0
