@@ -41,6 +41,11 @@ selection = st.multiselect(
     default=default_fusions if default_fusions else None,
 )
 
+# Save selection to new list
+user_selection = []
+for item in selection:
+    user_selection.append(item)
+
 # Only include useful columns
 metric = st.selectbox(
     label='Metric to Prioritize (only for optimal fusions)',
@@ -58,11 +63,6 @@ metric = st.selectbox(
 
 adjust_for_threat_score = st.toggle(label='Adjust for threat scores', value=False)
 
-# Save selection to new list
-user_selection = []
-for item in selection:
-    user_selection.append(item)
-
 if st.button('Find All Fusions'):
     fusion_functions.get_possible_fusions(user_selection, adjust_for_threat_score)
     df = pd.read_csv('fusion_dashboard/data/possible_fusions.csv')
@@ -70,9 +70,7 @@ if st.button('Find All Fusions'):
 elif st.button('Find Optimal Fusions'):
     fusion_functions.get_possible_fusions(user_selection, adjust_for_threat_score)
     all_fusions = pd.read_csv('fusion_dashboard/data/possible_fusions.csv')
-
     fusion_functions.get_optimal_fusions(all_fusions, prioritized_metric=metric)
-
     df = pd.read_csv('fusion_dashboard/data/optimal_fusions.csv')
     display_fusion_results(df)
 elif load_fusions:
