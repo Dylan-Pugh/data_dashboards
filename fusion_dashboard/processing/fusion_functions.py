@@ -1,10 +1,11 @@
 import json
 import pandas as pd
 import requests
+import streamlit as st
 from data import static_types
 
 
-def write_out_pokemon_data(input_pokemon, output_path: str):
+def get_pokemon_df(input_pokemon):
     # Preprocess the input data
     for entry in input_pokemon:
         stats = entry.get('Stats')
@@ -33,8 +34,7 @@ def write_out_pokemon_data(input_pokemon, output_path: str):
     # Normalize column names (replace underscores with spaces and capitalize each word)
     df.columns = [col.replace('_', ' ').title() for col in df.columns]
 
-    # Write the DataFrame to a CSV file
-    df.to_csv(output_path, index=False)
+    return df
 
 
 def get_type_data(type_name):
@@ -273,6 +273,7 @@ def analyze_resistances(input_pokemon, adjust_for_threat_score: bool):
     return input_pokemon
 
 
+@st.cache_data
 def get_possible_fusions(pokemon_list, adjust_for_threat_score):
     analyzed_pokemon = []
 
@@ -306,9 +307,10 @@ def get_possible_fusions(pokemon_list, adjust_for_threat_score):
     # Sort the list by effective delta, descending
     analyzed_fusions = sorted(analyzed_fusions, key=lambda x: x['Effective_delta'], reverse=True)
 
-    write_out_pokemon_data(input_pokemon=analyzed_fusions, output_path='fusion_dashboard/data/possible_fusions.csv')
+    output_df = get_pokemon_df(input_pokemon=analyzed_fusions)
+    return output_df
 
-
+@st.cache_data
 def get_optimal_fusions(input_df, prioritized_metric):
     # Convert data_list into a DataFrame
     data_list = input_df.fillna(0).to_dict(orient='records')
@@ -333,9 +335,9 @@ def get_optimal_fusions(input_df, prioritized_metric):
     # Convert the result back to a DataFrame
     optimal_fusions_df = pd.DataFrame(optimal_fusions)
 
-    optimal_fusions_df.to_csv('fusion_dashboard/data/optimal_fusions.csv', index=False)
+    return optimal_fusions_df
 
-
+@st.cache_data
 def create_fused_team(pairs, adjust_for_threat_score):
     fused_team = []
 
@@ -366,4 +368,6 @@ def create_fused_team(pairs, adjust_for_threat_score):
     # Sort the list by effective delta, descending
     analyzed_fusions = sorted(analyzed_fusions, key=lambda x: x['Effective_delta'], reverse=True)
 
-    write_out_pokemon_data(input_pokemon=analyzed_fusions, output_path='fusion_dashboard/data/current_team.csv')
+    team_df = get_pokemon_df(input_pokemon=analyzed_fusions)
+
+    return team_df

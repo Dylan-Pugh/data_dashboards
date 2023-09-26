@@ -1,4 +1,3 @@
-import os
 import streamlit as st
 import pandas as pd
 from viz import display_functions
@@ -6,7 +5,7 @@ from processing import fusion_functions
 
 st.set_page_config(layout='wide', page_icon=':bar_chart:')
 
-
+@st.cache_data
 def display_fusion_results(df):
     # Display table of fusions
     st.dataframe(df, use_container_width=True, hide_index=True)
@@ -34,12 +33,15 @@ def display_fusion_results(df):
 
 df = pd.read_csv('fusion_dashboard/data/current_dex.csv')
 
-load_team = False
+if 'current_team' not in st.session_state:
+    st.session_state['current_team'] = None
 
-if os.path.exists('fusion_dashboard/data/current_team.csv'):
+default_bodies = None
+default_heads = None
+
+if st.session_state['current_team'] is not None:
     # Initialize with current data, if it exists
-    current_team = pd.read_csv('fusion_dashboard/data/current_team.csv')
-    load_team = True
+    current_team = st.session_state['current_team']
 
     default_heads = current_team['Head'].tolist()
     default_heads = [head.capitalize() for head in default_heads]
@@ -74,11 +76,8 @@ for pair in fusion_pairs:
 adjust_for_threat_score = st.toggle(label='Adjust for threat scores', value=False)
 
 if st.button('Analyze Team'):
-    fusion_functions.create_fused_team(fusion_pairs, adjust_for_threat_score)
-
-    # Read the CSV file into a Pandas DataFrame
-    df = pd.read_csv('fusion_dashboard/data/current_team.csv')
-
-    display_fusion_results(df)
-elif load_team:
-    display_fusion_results(current_team)
+    fused_team = fusion_functions.create_fused_team(fusion_pairs, adjust_for_threat_score)
+    st.session_state['current_team'] = fused_team
+    display_fusion_results(fused_team)
+elif st.session_state['current_team'] is not None:
+    display_fusion_results(st.session_state['current_team'])
