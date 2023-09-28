@@ -1,14 +1,16 @@
-import os
-import streamlit as st
 import pandas as pd
-from viz import display_functions
+import streamlit as st
+
 from processing import fusion_functions
+from viz import display_functions
 
 
 st.set_page_config(layout='wide', page_icon=':dna:')
 
 
+@st.cache_data
 def display_fusion_results(df):
+    """Display fusion results dataframe."""
     # Display table of fusions
     st.dataframe(df, use_container_width=True, hide_index=True)
 
@@ -21,18 +23,15 @@ def display_fusion_results(df):
     st.plotly_chart(stacked_bar, use_container_width=True)
 
 
-df = pd.read_csv('fusion_dashboard/data/current_dex.csv')
+if 'current_fusions' not in st.session_state:
+    st.session_state['current_fusions'] = None
 
-load_fusions = False
-
-if os.path.exists('fusion_dashboard/data/possible_fusions.csv'):
-    # Initialize with current data, if it exists
-    current_selection = pd.read_csv('fusion_dashboard/data/possible_fusions.csv')
-    load_fusions = True
-
-    default_fusions = set(current_selection['Head'].tolist())
+default_fusions = None
+if st.session_state['current_fusions'] is not None:
+    default_fusions = set(st.session_state['current_fusions']['Head'].tolist())
     default_fusions = [mon.capitalize() for mon in default_fusions]
 
+df = pd.read_csv('fusion_dashboard/data/current_dex.csv')
 options = df['NAME'].to_list()
 
 selection = st.multiselect(
@@ -58,20 +57,21 @@ metric = st.selectbox(
         'Speed',
         'Bst',
         'Effective Delta',
+        'Total Weaknesses',
     ],
 )
 
 adjust_for_threat_score = st.toggle(label='Adjust for threat scores', value=False)
 
 if st.button('Find All Fusions'):
-    fusion_functions.get_possible_fusions(user_selection, adjust_for_threat_score)
-    df = pd.read_csv('fusion_dashboard/data/possible_fusions.csv')
-    display_fusion_results(df)
+    possible_fusions = fusion_functions.get_possible_fusions(user_selection, adjust_for_threat_score)
+    st.session_state['current_fusions'] = possible_fusions
+    display_fusion_results(possible_fusions)
 elif st.button('Find Optimal Fusions'):
-    fusion_functions.get_possible_fusions(user_selection, adjust_for_threat_score)
-    all_fusions = pd.read_csv('fusion_dashboard/data/possible_fusions.csv')
-    fusion_functions.get_optimal_fusions(all_fusions, prioritized_metric=metric)
-    df = pd.read_csv('fusion_dashboard/data/optimal_fusions.csv')
-    display_fusion_results(df)
-elif load_fusions:
-    display_fusion_results(current_selection)
+    all_fusions = fusion_functions.get_possible_fusions(user_selection, adjust_for_threat_score)
+    st.session_state['current_fusions'] = all_fusions
+
+    optimal_fusions = fusion_functions.get_optimal_fusions(all_fusions, prioritized_metric=metric)
+    display_fusion_results(optimal_fusions)
+elif st.session_state['current_fusions'] is not None:
+    display_fusion_results(st.session_state['current_fusions'])
