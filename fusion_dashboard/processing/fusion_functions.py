@@ -147,7 +147,7 @@ def fuse_pokemon(pokemon1, pokemon2):
     return fused_pokemon
 
 
-def analyze_single_type(input_pokemon, adjust_for_threat_score:bool):
+def analyze_single_type(input_pokemon, adjust_for_threat_score: bool):
     type_data = get_type_data(input_pokemon['primary_type'].lower())
 
     resistances = {entry['name'] for entry in type_data['damage_relations']['half_damage_from']}
@@ -273,6 +273,45 @@ def analyze_resistances(input_pokemon, adjust_for_threat_score: bool):
     return input_pokemon
 
 
+def find_extreme_score_pairs(pair_scores, find_max=True):
+    def backtrack(elements, current_score, current_pairs):
+        nonlocal extreme_score, extreme_pairs
+
+        if not elements:
+            if (find_max and current_score > extreme_score) or (not find_max and current_score < extreme_score):
+                extreme_score = current_score
+                extreme_pairs = current_pairs[:]
+            return
+
+        for pair in list(pair_scores.keys()):
+            if pair[0] in elements and pair[1] in elements:
+                remaining_elements = elements - set(pair)
+                current_pairs.append(pair)
+                current_score += pair_scores[pair]
+                backtrack(remaining_elements, current_score, current_pairs)
+                current_pairs.pop()
+                current_score -= pair_scores[pair]
+
+    extreme_score = float('-inf') if find_max else float('inf')
+    extreme_pairs = []
+    all_elements = {element for pair in pair_scores.keys() for element in pair}
+
+    backtrack(all_elements, 0, [])
+
+    return extreme_pairs
+
+
+def transform_dataframe_to_weighted_pairs(df, weight_field):
+    pair_scores = {}
+
+    for _, row in df.iterrows():
+        head, body, score = row['Head'], row['Body'], row[weight_field]
+        pair = (head, body)
+        pair_scores[pair] = score
+
+    return pair_scores
+
+
 @st.cache_data
 def get_possible_fusions(pokemon_list, adjust_for_threat_score):
     analyzed_pokemon = []
@@ -310,32 +349,26 @@ def get_possible_fusions(pokemon_list, adjust_for_threat_score):
     output_df = get_pokemon_df(input_pokemon=analyzed_fusions)
     return output_df
 
+
 @st.cache_data
 def get_optimal_fusions(input_df, prioritized_metric):
-    # Convert data_list into a DataFrame
-    data_list = input_df.fillna(0).to_dict(orient='records')
+    weighted_pairs = transform_dataframe_to_weighted_pairs(input_df, prioritized_metric)
 
+    # Special handling for total weaknesses, lower is better
     if prioritized_metric == 'Total Weaknesses':
-        do_reverse = False
+        optimal_pairs = find_extreme_score_pairs(weighted_pairs, find_max=False)
     else:
-        do_reverse = True
+        optimal_pairs = find_extreme_score_pairs(weighted_pairs)
 
-    sorted_data_list = sorted(data_list, key=lambda x: x[prioritized_metric], reverse=do_reverse)
-    optimal_fusions = []
+    # Extract matching records
+    # Create a set of tuples from optimal_pairs for faster lookup
+    optimal_set = set(optimal_pairs)
 
-    while sorted_data_list:
-        highest_effective = sorted_data_list[0]
-        optimal_fusions.append(highest_effective)
-        species_one = highest_effective['Head']
-        species_two = highest_effective['Body']
+    # Filter the DataFrame to only rows where the (Head, Body) tuple is in optimal_set
+    optimal_fusions = input_df[input_df[['Head', 'Body']].apply(tuple, axis=1).isin(optimal_set)]
 
-        # Remove rows with the same 'Head' or 'Body' as the selected species
-        sorted_data_list = [item for item in sorted_data_list if species_one not in item.values() and species_two not in item.values()]
+    return optimal_fusions
 
-    # Convert the result back to a DataFrame
-    optimal_fusions_df = pd.DataFrame(optimal_fusions)
-
-    return optimal_fusions_df
 
 @st.cache_data
 def create_fused_team(pairs, adjust_for_threat_score):
