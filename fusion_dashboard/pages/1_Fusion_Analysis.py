@@ -7,6 +7,7 @@ from viz import display_functions
 
 st.set_page_config(layout='wide', page_icon=':dna:')
 
+
 @st.cache_data
 def display_fusion_results(df):
     """Display fusion results dataframe."""
@@ -56,8 +57,8 @@ metric = st.selectbox(
         'Speed',
         'Bst',
         'Effective Delta',
+        'Total Weaknesses',
     ],
-    default='Bst',
 )
 
 adjust_for_threat_score = st.toggle(label='Adjust for threat scores', value=False)
