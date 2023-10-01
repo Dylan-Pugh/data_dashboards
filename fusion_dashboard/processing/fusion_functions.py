@@ -2,6 +2,7 @@ import json
 import pandas as pd
 import requests
 import streamlit as st
+from data import constants
 from data import static_types
 
 
@@ -24,7 +25,7 @@ def get_pokemon_df(input_pokemon):
         'head', 'body', 'primary_type', 'secondary_type',
         'HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed', 'BST',
         'Normal_Resistances', 'Super_Resistances', 'Immunities',
-        'Normal_Weaknesses', 'Super_Weaknesses',
+        'Neutral_Types', 'Normal_Weaknesses', 'Super_Weaknesses',
         'Total_resistances', 'Total_weaknesses', 'Effective_delta',
     ]
 
@@ -179,11 +180,20 @@ def analyze_single_type(input_pokemon, adjust_for_threat_score: bool):
         # alt calculation here - immunities should count for 2
         effective_delta = (len(resistances) + (len(immunities) * 2)) - len(weaknesses)
 
+    # Add in neutral types
+    neutral_types = [
+        type.lower() for type in constants.TYPES
+        if type.lower() not in (
+            resistances |
+            immunities |
+            weaknesses
+        )
+    ]
+
     input_pokemon['Normal_Resistances'] = resistances
-    input_pokemon['Super_Resistances'] = None
     input_pokemon['Immunities'] = immunities
+    input_pokemon['Neutral_Types'] = set(neutral_types)
     input_pokemon['Normal_Weaknesses'] = weaknesses
-    input_pokemon['Super_Weaknesses'] = None
     input_pokemon['Total_resistances'] = len(resistances)
     input_pokemon['Total_weaknesses'] = len(weaknesses)
     input_pokemon['Effective_delta'] = effective_delta
@@ -261,9 +271,22 @@ def analyze_resistances(input_pokemon, adjust_for_threat_score: bool):
 
     effective_delta = delta_resist - delta_weak
 
+    # Add in neutral types
+    neutral_types = [
+        type.lower() for type in constants.TYPES
+        if type.lower() not in (
+            resisted_types |
+            super_resisted_types |
+            combined_immunities |
+            combined_weaknesses |
+            super_weak_types
+        )
+    ]
+
     input_pokemon['Normal_Resistances'] = resisted_types
     input_pokemon['Super_Resistances'] = super_resisted_types
     input_pokemon['Immunities'] = combined_immunities
+    input_pokemon['Neutral_Types'] = set(neutral_types)
     input_pokemon['Normal_Weaknesses'] = combined_weaknesses
     input_pokemon['Super_Weaknesses'] = super_weak_types
     input_pokemon['Total_resistances'] = num_resist
