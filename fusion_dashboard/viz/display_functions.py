@@ -140,7 +140,14 @@ def build_weaknesses_scatter(input_data: pd.DataFrame):
 
 
 def build_individual_weak_chart(input_data: pd.DataFrame):
-    types = ['Normal Resistances', 'Super Resistances', 'Normal Weaknesses', 'Super Weaknesses', 'Immunities']
+    types = [
+        'Normal Resistances',
+        'Super Resistances',
+        'Normal Weaknesses',
+        'Super Weaknesses',
+        'Immunities',
+        'Neutral Types',
+    ]
 
     # Initialize an empty list to store data
     data = []
@@ -159,12 +166,18 @@ def build_individual_weak_chart(input_data: pd.DataFrame):
                         multiplier = 0.25
                     elif type_name == 'Immunities':
                         multiplier = 0
+                    elif type_name == 'Neutral Types':
+                        multiplier = 1
                     elif type_name == 'Normal Weaknesses':
                         multiplier = 2
                     elif type_name == 'Super Weaknesses':
                         multiplier = 4
 
-                    data.append({'Pokemon': f"{row['Head']} / {row['Body']}", 'Type': val, 'Category': multiplier})
+                    data.append({
+                        'Pokemon': f"{row['Head'].capitalize()} / {row['Body'].capitalize()}",
+                        'Type': val.capitalize(),
+                        'Category': multiplier,
+                    })
 
     # Create a DataFrame from the data list
     heatmap_df = pd.DataFrame(data)
@@ -172,13 +185,13 @@ def build_individual_weak_chart(input_data: pd.DataFrame):
     pivot = heatmap_df.pivot(index='Pokemon', columns='Type', values='Category').fillna(1)
 
     # Create a heatmap
-    fig = px.imshow(pivot, color_continuous_scale='RdYlGn_r', color_continuous_midpoint=1, text_auto=True)
+    fig = px.imshow(pivot, color_continuous_scale='RdYlGn_r', color_continuous_midpoint=1, text_auto=True, labels={'color': 'Multiplier'})
     fig.update_layout(
         title='Pokémon Weaknesses and Resistances',
         xaxis_title='Type',
         yaxis_title='Pokémon',
-        xaxis_nticks=len(heatmap_df['Type'].unique()),  # Display all Pokemon
-        yaxis_nticks=len(heatmap_df['Pokemon'].unique()),      # Display all Types
+        xaxis_nticks=len(heatmap_df['Type'].unique()),  # Display all Types
+        yaxis_nticks=len(heatmap_df['Pokemon'].unique()),      # Display all Pokemon
         xaxis_showticklabels=True,  # Show Pokemon names
         yaxis_showticklabels=True,   # Show Type names
     )
