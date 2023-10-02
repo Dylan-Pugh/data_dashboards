@@ -66,6 +66,32 @@ def build_BST_stacked_bar(input_data: pd.DataFrame):
     return fig
 
 
+def build_individual_stat_bars(input_data: pd.DataFrame):
+    # Define the stats columns in the desired order
+    stats_columns = ['Hp', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed']
+    stat_values = input_data[stats_columns].iloc[0].values
+
+    # Create a DataFrame for plotting
+    df = pd.DataFrame({'Stat': stats_columns, 'Value': stat_values})
+
+    # Sort the DataFrame by value in descending order
+    df = df.sort_values(by='Value', ascending=True)
+
+    # Create the bar chart
+    fig = px.bar(
+        df,
+        x='Value',
+        y='Stat',
+        orientation='h',
+        labels={'Value': 'Value'},
+        title=f'Base Stats for {input_data["Head"].iloc[0].capitalize()} & {input_data["Body"].iloc[0].capitalize()}',
+        color='Value',  # Assign color based on values
+        color_continuous_scale='RdYlGn',  # Use the defined color scale)
+    )
+
+    return fig
+
+
 def build_cumulative_stat_bar(input_data: pd.DataFrame):
     # Calculate the cumulative values for each stat
     stats = ['Hp', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed']
