@@ -44,6 +44,54 @@ def get_type_data(type_name):
     return type_data
 
 
+def get_move_data(move_name):
+    # PokeAPI URL for move details
+    url = f'https://pokeapi.co/api/v2/move/{move_name}/'
+
+    try:
+        # Send a GET request to the API
+        response = requests.get(url)
+
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            move_data = response.json()
+            move_type = move_data['type']['name']
+            move_power = move_data['power'] if 'power' in move_data else None
+            return move_type, move_power
+        else:
+            return None, None
+
+    except requests.exceptions.RequestException as e:
+        print(f'Error: {e}')
+        return None, None
+
+
+def analyze_moveset(moves_list):
+    # Create an empty DataFrame to store move details
+    move_details = []
+
+    # Iterate through the list of moves
+    for move in moves_list:
+        move_type, move_power = get_move_data(move)
+        move_details.append({
+            'Move': move,
+            'Type': move_type,
+            'Power': move_power,
+        })
+
+    # Create a DataFrame from the list of move details
+    move_details_df = pd.DataFrame(move_details)
+
+    # Add a 'Caution' column based on the 'Power' column and the 'dangerous_moves' list
+    move_details_df['Caution'] = (move_details_df['Power'] >= 80) | (move_details_df['Move'].isin(constants.DANGEROUS_MOVES))
+
+    move_details_df['Move'] = move_details_df['Move'].str.capitalize()
+    move_details_df['Type'] = move_details_df['Type'].str.capitalize()
+    move_details_df['Power'] = move_details_df['Power'].fillna(0).astype(int)
+
+    return move_details_df
+
+
 def extract_learnset(moves_dict: dict):
     # Initialize an empty result dictionary
     result_dict = {}
@@ -85,7 +133,7 @@ def combine_learnsets(learnset1, learnset2):
     for learn_level, move_list in learnset2.items():
         # If the move ID is already in combined_learnset, append the move name
         if learn_level in combined_learnset:
-            combined_learnset[learn_level] + move_list
+            combined_learnset[learn_level] += move_list
         # Otherwise, add the move ID and move name to combined_learnset
         else:
             combined_learnset[learn_level] = move_list
