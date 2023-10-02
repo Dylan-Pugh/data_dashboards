@@ -36,31 +36,6 @@ def calculate_and_display_scores(weights, offensive_potentials):
         json.dump(sorted_potentials, json_file)
 
 
-def display_fusion_results(df):
-    # Display table of fusions
-    st.dataframe(df, use_container_width=True, hide_index=True)
-
-    # Show scatter plot
-    scatter = display_functions.build_BST_delta_scatter(df)
-    st.plotly_chart(scatter, use_container_width=True)
-
-    # Show stacked bar plot
-    stacked_bar = display_functions.build_BST_stacked_bar(df)
-    st.plotly_chart(stacked_bar, use_container_width=True)
-
-    # Show cumulative stats bar
-    cumulative_bar = display_functions.build_cumulative_stat_bar(df)
-    st.plotly_chart(cumulative_bar, use_container_width=True)
-
-    # Show weaknesses scatter
-    weak_scatter = display_functions.build_weaknesses_scatter(df)
-    st.plotly_chart(weak_scatter, use_container_width=True)
-
-    # Show weaknesses chart
-    weak_chart = display_functions.build_individual_weak_chart(df)
-    st.plotly_chart(weak_chart, use_container_width=True)
-
-
 # Open the JSON file for reading
 file = open('fusion_dashboard/data/offensive_potentials_V3.json')
 offensive_potentials = json.load(file)
