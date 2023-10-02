@@ -3,7 +3,7 @@ import pandas as pd
 from viz import display_functions
 from processing import fusion_functions
 
-st.set_page_config(layout='wide', page_icon=':bar_chart:')
+st.set_page_config(layout='wide', page_icon=':sleuth_or_spy:')
 
 
 def highlight_survived(s):
