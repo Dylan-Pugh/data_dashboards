@@ -11,8 +11,31 @@ st.set_page_config(layout='wide', page_icon=':dna:')
 @st.cache_data
 def display_fusion_results(df):
     """Display fusion results dataframe."""
+    st.header('Analysis', divider='rainbow')
     # Display table of fusions
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(
+        df, use_container_width=True, hide_index=True, column_order=[
+            'Head',
+            'Body',
+            'Primary Type',
+            'Secondary Type',
+            'Hp',
+            'Attack',
+            'Defense',
+            'Special Attack',
+            'Special Defense',
+            'Speed',
+            'Bst',
+            'Total Resistances',
+            'Total Weaknesses',
+            'Effective Delta',
+            'Normal Resistances',
+            'Super Resistances',
+            'Immunities',
+            'Normal Weaknesses',
+            'Super Weaknesses',
+        ],
+    )
 
     # Show scatter plot
     scatter = display_functions.build_BST_delta_scatter(df)
