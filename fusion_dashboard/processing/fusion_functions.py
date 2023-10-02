@@ -26,7 +26,7 @@ def get_pokemon_df(input_pokemon):
         'HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed', 'BST',
         'Normal_Resistances', 'Super_Resistances', 'Immunities',
         'Neutral_Types', 'Normal_Weaknesses', 'Super_Weaknesses',
-        'Total_resistances', 'Total_weaknesses', 'Effective_delta',
+        'Total_resistances', 'Total_weaknesses', 'Effective_delta', 'Learnset',
     ]
 
     # Create a Pandas DataFrame from the list of dictionaries with reordered columns and renamed columns
@@ -42,6 +42,55 @@ def get_type_data(type_name):
     response = requests.get(f'https://pokeapi.co/api/v2/type/{type_name}')
     type_data = response.json()
     return type_data
+
+
+def extract_learnset(moves_dict: dict):
+    # Initialize an empty result dictionary
+    result_dict = {}
+
+    # Loop through each move object in the list
+    for move_data in moves_dict:
+        move_name = move_data['move']['name']
+
+        # Loop through the 'version_group_details' list for the current move object
+        for item in move_data['version_group_details']:
+            if (
+                item['version_group']['name'] == 'ultra-sun-ultra-moon'
+                and item['move_learn_method']['name'] == 'level-up'
+            ):
+                level_learned_at = item['level_learned_at']
+                if level_learned_at in result_dict.keys():
+                    result_dict[level_learned_at].append(move_name)
+                else:
+                    result_dict[level_learned_at] = [move_name]
+
+    return result_dict
+
+
+def combine_learnsets(learnset1, learnset2):
+    """
+    Combine two learnsets, keeping unique move IDs and concatenating move names for duplicate move IDs.
+
+    Args:
+        learnset1 (dict): The first learnset dictionary.
+        learnset2 (dict): The second learnset dictionary.
+
+    Returns:
+        dict: A combined learnset dictionary.
+    """
+    # Create a copy of learnset1 to avoid modifying the original dictionary
+    combined_learnset = learnset1.copy()
+
+    # Iterate through the second learnset (learnset2)
+    for learn_level, move_list in learnset2.items():
+        # If the move ID is already in combined_learnset, append the move name
+        if learn_level in combined_learnset:
+            combined_learnset[learn_level] + move_list
+        # Otherwise, add the move ID and move name to combined_learnset
+        else:
+            combined_learnset[learn_level] = move_list
+
+    return combined_learnset
 
 
 def get_pokemon_info(pokemon_name):
@@ -75,6 +124,7 @@ def get_pokemon_info(pokemon_name):
             'Secondary Type': secondary_type,
             'Stats': stats,
             'BST': base_stat_total,
+            'Learnset': extract_learnset(data['moves']),
         }
 
         if species.lower() in map(str.lower, static_types.type_swaps.keys()):
@@ -115,6 +165,9 @@ def fuse_pokemon(pokemon1, pokemon2):
             'secondary_type': pokemon1['Primary Type'],
         }
 
+    # Both possible fusions will have the same learnset
+    combined_learnset = combine_learnsets(pokemon1['Learnset'], pokemon2['Learnset'])
+
     fused_pokemon = [fusion_1, fusion_2]
 
     for fusion in fused_pokemon:
@@ -144,6 +197,9 @@ def fuse_pokemon(pokemon1, pokemon2):
         # Check that we don't have duplicate types
         if fusion['primary_type'] == fusion['secondary_type']:
             fusion['secondary_type'] = None
+
+        # Add combined learnset
+        fusion['Learnset'] = combined_learnset
 
     return fused_pokemon
 
