@@ -1,6 +1,8 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import requests
+import streamlit as st
 
 
 def build_BST_delta_scatter(input_data: pd.DataFrame):
@@ -250,3 +252,17 @@ def build_offensive_threat_scatter(input_data):
     fig.update_xaxes(tickangle=45, tickvals=list(range(len(types))), ticktext=types)
 
     return fig
+
+
+@st.cache_data
+def display_sprite_with_fallback(head_pokedex_number, body_pokedex_number):
+    # Attempt to display the image with error handling
+    sprite_url_stub = 'https://gitlab.com/infinitefusion/sprites/-/raw/master/'
+    custom_url = f'{sprite_url_stub}/CustomBattlers/{head_pokedex_number}/{head_pokedex_number}.{body_pokedex_number}.png'
+    default_url = f'{sprite_url_stub}/Battlers/{head_pokedex_number}/{head_pokedex_number}.{body_pokedex_number}.png'
+
+    response = requests.get(custom_url)
+    # Determine which URL to display
+    to_display = custom_url if response.status_code == 200 else default_url
+
+    st.image(to_display, use_column_width=True)
