@@ -6,6 +6,12 @@ from data import constants
 from data import static_types
 
 
+@st.cache_data
+def get_species_dex_dict():
+    df = pd.read_csv('fusion_dashboard/data/current_dex.csv')
+    return df.set_index('NAME')['ID'].to_dict()
+
+
 def get_pokemon_df(input_pokemon):
     # Preprocess the input data
     for entry in input_pokemon:
@@ -22,7 +28,7 @@ def get_pokemon_df(input_pokemon):
 
     # Define the desired column order and rename columns
     column_order = [
-        'head', 'body', 'primary_type', 'secondary_type',
+        'head', 'head_ID', 'body', 'body_ID', 'primary_type', 'secondary_type',
         'HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed', 'BST',
         'Normal_Resistances', 'Super_Resistances', 'Immunities',
         'Neutral_Types', 'Normal_Weaknesses', 'Super_Weaknesses',
@@ -166,8 +172,16 @@ def get_pokemon_info(pokemon_name):
             'Speed': speed,
         }
 
+        # override for all Normal/Flying types
+        if primary_type == 'normal' and secondary_type == 'flying':
+            primary_type = 'flying'
+            secondary_type = None
+
+        species_dex_lookup = get_species_dex_dict()
+
         pokemon_info = {
             'Species': species,
+            'ID': species_dex_lookup[species],
             'Primary Type': primary_type,
             'Secondary Type': secondary_type,
             'Stats': stats,
@@ -194,6 +208,8 @@ def fuse_pokemon(pokemon1, pokemon2):
     fusion_1 = {
         'head': pokemon1['Species'],
         'body': pokemon2['Species'],
+        'head_ID': pokemon1['ID'],
+        'body_ID': pokemon2['ID'],
         'primary_type': pokemon1['Primary Type'],
         'secondary_type': pokemon2['Secondary Type'] if pokemon2['Secondary Type'] and pokemon2['Secondary Type'] != pokemon1['Primary Type'] else pokemon2['Primary Type'],
     }
@@ -202,6 +218,8 @@ def fuse_pokemon(pokemon1, pokemon2):
         fusion_2 = {
             'head': pokemon2['Species'],
             'body': pokemon1['Species'],
+            'head_ID': pokemon2['ID'],
+            'body_ID': pokemon1['ID'],
             'primary_type': pokemon2['Primary Type'],
             'secondary_type': pokemon1['Secondary Type'] if pokemon1['Secondary Type'] else pokemon1['Primary Type'],
         }
@@ -209,6 +227,8 @@ def fuse_pokemon(pokemon1, pokemon2):
         fusion_2 = {
             'head': pokemon2['Species'],
             'body': pokemon1['Species'],
+            'head_ID': pokemon2['ID'],
+            'body_ID': pokemon1['ID'],
             'primary_type': pokemon2['Primary Type'],
             'secondary_type': pokemon1['Primary Type'],
         }

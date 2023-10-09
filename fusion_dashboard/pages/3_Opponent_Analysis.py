@@ -6,27 +6,35 @@ from processing import fusion_functions
 st.set_page_config(layout='wide', page_icon=':sleuth_or_spy:')
 
 
-def highlight_survived(s):
+def highlight_dangerous_moves(s):
     return ['background-color: #f26d6d']*len(s) if s.Caution else ['background-color: #37bbf0']*len(s)
 
 
 @st.cache_data
 def display_opponent_analysis(df, opponent_level):
-    st.header('Analysis', divider='rainbow')
     # Extract Head, Body, Primary, and Secondary Types
     head = df['Head'].iloc[0]
     body = df['Body'].iloc[0]
     primary_type = df['Primary Type'].iloc[0]
     secondary_type = df['Secondary Type'].iloc[0]
+    BST = df['Bst'].iloc[0]
 
     if secondary_type and secondary_type != 'None':
         type_string = f'{primary_type.capitalize()}/{secondary_type.capitalize()}'
     else:
         type_string = primary_type.capitalize()
 
-    # Display the information using st.markdown
-    st.header(f'You Are Facing: {head.capitalize()}/{body.capitalize()}')
-    st.header(f'Type: {type_string}')
+    st.header(f'You Are Facing: {head.capitalize()}/{body.capitalize()}', divider='rainbow')
+
+    col1, col2, col3 = st.columns([0.4, 0.2, 0.4])
+    # Display the information in each column
+    with col1:
+        st.header(f'Type: {type_string}')
+        st.header(f'BST: {BST}')
+    with col2:
+        display_functions.display_sprite_with_fallback(df.iloc[0]['Head Id'], df.loc[0]['Body Id'])
+    with col3:
+        st.empty()
 
     # Show stat bars
     stats_bar = display_functions.build_individual_stat_bars(df)
@@ -49,7 +57,7 @@ def display_opponent_analysis(df, opponent_level):
     # Display the table with highlighted rows
     st.write('Known Moves:')
     st.dataframe(
-        moves_df.style.apply(highlight_survived, axis=1),
+        moves_df.style.apply(highlight_dangerous_moves, axis=1),
         use_container_width=True,
         hide_index=True,
         column_order=['Move', 'Type', 'Power'],
