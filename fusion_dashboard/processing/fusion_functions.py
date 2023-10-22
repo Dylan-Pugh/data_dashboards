@@ -30,9 +30,9 @@ def get_pokemon_df(input_pokemon):
     column_order = [
         'head', 'head_ID', 'body', 'body_ID', 'primary_type', 'secondary_type',
         'HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed', 'BST',
-        'Normal_Resistances', 'Super_Resistances', 'Immunities',
+        'Effective_delta', 'Normal_Resistances', 'Super_Resistances', 'Immunities',
         'Neutral_Types', 'Normal_Weaknesses', 'Super_Weaknesses',
-        'Total_resistances', 'Total_weaknesses', 'Effective_delta', 'Learnset',
+        'Total_resistances', 'Total_weaknesses', 'Learnset', 'Evoline',
     ]
 
     # Create a Pandas DataFrame from the list of dictionaries with reordered columns and renamed columns
@@ -147,6 +147,65 @@ def combine_learnsets(learnset1, learnset2):
     return combined_learnset
 
 
+def get_evolution_levels(pokemon_name):
+    # Step 1: Send an HTTP GET request to retrieve species information
+    species_url = f'https://pokeapi.co/api/v2/pokemon-species/{pokemon_name}'
+    species_response = requests.get(species_url)
+
+    if species_response.status_code != 200:
+        return None  # Failed to get species information
+
+    species_data = species_response.json()
+
+    # Step 2: Extract the URL of the evolution chain
+    evolution_chain_url = species_data['evolution_chain']['url']
+
+    # Step 3: Send an HTTP GET request to the evolution chain URL
+    evolution_chain_response = requests.get(evolution_chain_url)
+
+    if evolution_chain_response.status_code != 200:
+        return None  # Failed to get evolution chain information
+
+    evolution_chain_data = evolution_chain_response.json()
+
+    # Step 4: Extract the evolution details
+
+    evolution_details = {}
+    current = evolution_chain_data['chain']
+
+    while current:
+        if 'evolves_to' in current and len(current['evolves_to']) > 0:
+            for evolution in current['evolves_to']:
+                evo_data = evolution['evolution_details'][0]
+                result = next((v for v in evo_data.values() if v or (isinstance(v, dict) and (v.get('name')))), None)
+
+                if result:
+                    species = evolution['species']['name'].capitalize()
+                    if isinstance(result, dict):
+                        result = result['name'].capitalize()
+
+                    if result in evolution_details:
+                        evolution_details[result].append(species)
+                    else:
+                        evolution_details[result] = [species]
+
+                # if 'min_level' in evolution['evolution_details'][0] and evolution['evolution_details'][0]['min_level']:
+                #     level = evolution['evolution_details'][0]['min_level']
+                #     evo_method = level if level else evolution['evolution_details'][0]['item']['name'].capitalize()
+                #     species = evolution['species']['name'].capitalize()
+
+                #     if evo_method in evolution_details:
+                #         evolution_details[evo_method].append(species)
+                #     else:
+                #         evolution_details[evo_method] = [species]
+
+                current = evolution
+        else:
+            break
+
+    return evolution_details
+
+
 def get_pokemon_info(pokemon_name):
     url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name}'
     response = requests.get(url)
@@ -187,6 +246,7 @@ def get_pokemon_info(pokemon_name):
             'Stats': stats,
             'BST': base_stat_total,
             'Learnset': extract_learnset(data['moves']),
+            'Evoline': get_evolution_levels(species),
         }
 
         if species.lower() in map(str.lower, static_types.type_swaps.keys()):
@@ -233,8 +293,9 @@ def fuse_pokemon(pokemon1, pokemon2):
             'secondary_type': pokemon1['Primary Type'],
         }
 
-    # Both possible fusions will have the same learnset
+    # Both possible fusions will have the same learnset & evolines
     combined_learnset = combine_learnsets(pokemon1['Learnset'], pokemon2['Learnset'])
+    combined_evo_lines = combine_learnsets(pokemon1['Evoline'], pokemon2['Evoline'])
 
     fused_pokemon = [fusion_1, fusion_2]
 
@@ -268,6 +329,9 @@ def fuse_pokemon(pokemon1, pokemon2):
 
         # Add combined learnset
         fusion['Learnset'] = combined_learnset
+
+        # Add combined evoline
+        fusion['Evoline'] = combined_evo_lines
 
     return fused_pokemon
 
