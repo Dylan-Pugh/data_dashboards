@@ -3,7 +3,7 @@ import pandas as pd
 import requests
 import streamlit as st
 from data import constants
-from data import static_types
+from fusion_dashboard.data import static_swaps
 
 
 @st.cache_data
@@ -12,6 +12,7 @@ def get_species_dex_dict():
     return df.set_index('NAME')['ID'].to_dict()
 
 
+@st.cache_data
 def get_pokemon_df(input_pokemon):
     # Preprocess the input data
     for entry in input_pokemon:
@@ -44,12 +45,14 @@ def get_pokemon_df(input_pokemon):
     return df
 
 
+@st.cache_data
 def get_type_data(type_name):
     response = requests.get(f'https://pokeapi.co/api/v2/type/{type_name}')
     type_data = response.json()
     return type_data
 
 
+@st.cache_data
 def get_move_data(move_name):
     # PokeAPI URL for move details
     url = f'https://pokeapi.co/api/v2/move/{move_name}/'
@@ -72,6 +75,7 @@ def get_move_data(move_name):
         return None, None
 
 
+@st.cache_data
 def analyze_moveset(moves_list):
     # Create an empty DataFrame to store move details
     move_details = []
@@ -98,6 +102,7 @@ def analyze_moveset(moves_list):
     return move_details_df
 
 
+@st.cache_data
 def extract_learnset(moves_dict: dict):
     # Initialize an empty result dictionary
     result_dict = {}
@@ -108,19 +113,23 @@ def extract_learnset(moves_dict: dict):
 
         # Loop through the 'version_group_details' list for the current move object
         for item in move_data['version_group_details']:
-            if (
-                item['version_group']['name'] == 'ultra-sun-ultra-moon'
-                and item['move_learn_method']['name'] == 'level-up'
-            ):
-                level_learned_at = item['level_learned_at']
-                if level_learned_at in result_dict.keys():
-                    result_dict[level_learned_at].append(move_name)
-                else:
-                    result_dict[level_learned_at] = [move_name]
+            if item['version_group']['name'] == 'ultra-sun-ultra-moon':
+                level_learned_at = None
+                if item['move_learn_method']['name'] == 'level-up':
+                    level_learned_at = item['level_learned_at']
+                elif item['move_learn_method']['name'] == 'machine':
+                    level_learned_at = 'TM'
+
+                if level_learned_at:
+                    if level_learned_at in result_dict.keys():
+                        result_dict[level_learned_at].append(move_name)
+                    else:
+                        result_dict[level_learned_at] = [move_name]
 
     return result_dict
 
 
+@st.cache_data
 def combine_learnsets(learnset1, learnset2):
     """
     Combine two learnsets, keeping unique move IDs and concatenating move names for duplicate move IDs.
@@ -178,26 +187,23 @@ def get_evolution_levels(pokemon_name):
             for evolution in current['evolves_to']:
                 evo_data = evolution['evolution_details'][0]
                 result = next((v for v in evo_data.values() if v or (isinstance(v, dict) and (v.get('name')))), None)
-
                 if result:
                     species = evolution['species']['name'].capitalize()
+
+                    if species in static_swaps.evo_overrides.keys():
+                        result = static_swaps.evo_overrides[species]
+
                     if isinstance(result, dict):
                         result = result['name'].capitalize()
 
-                    if result in evolution_details:
-                        evolution_details[result].append(species)
-                    else:
-                        evolution_details[result] = [species]
+                    if isinstance(result, (int, str)):
+                        result = [result]
 
-                # if 'min_level' in evolution['evolution_details'][0] and evolution['evolution_details'][0]['min_level']:
-                #     level = evolution['evolution_details'][0]['min_level']
-                #     evo_method = level if level else evolution['evolution_details'][0]['item']['name'].capitalize()
-                #     species = evolution['species']['name'].capitalize()
-
-                #     if evo_method in evolution_details:
-                #         evolution_details[evo_method].append(species)
-                #     else:
-                #         evolution_details[evo_method] = [species]
+                    for result in result:
+                        if result in evolution_details:
+                            evolution_details[result].append(species)
+                        else:
+                            evolution_details[result] = [species]
 
                 current = evolution
         else:
@@ -206,6 +212,7 @@ def get_evolution_levels(pokemon_name):
     return evolution_details
 
 
+@st.cache_data
 def get_pokemon_info(pokemon_name):
     url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name}'
     response = requests.get(url)
@@ -249,12 +256,12 @@ def get_pokemon_info(pokemon_name):
             'Evoline': get_evolution_levels(species),
         }
 
-        if species.lower() in map(str.lower, static_types.type_swaps.keys()):
-            pokemon_info['Primary Type'] = static_types.type_swaps[species]['primary_type']
-            pokemon_info['Secondary Type'] = static_types.type_swaps[species]['secondary_type']
+        if species.lower() in map(str.lower, static_swaps.type_swaps.keys()):
+            pokemon_info['Primary Type'] = static_swaps.type_swaps[species]['primary_type']
+            pokemon_info['Secondary Type'] = static_swaps.type_swaps[species]['secondary_type']
 
-        if species.lower() in map(str.lower, static_types.type_overrides.keys()):
-            pokemon_info['Primary Type'] = static_types.type_overrides[species]
+        if species.lower() in map(str.lower, static_swaps.type_overrides.keys()):
+            pokemon_info['Primary Type'] = static_swaps.type_overrides[species]
             pokemon_info['Secondary Type'] = None
 
         return pokemon_info
@@ -262,6 +269,7 @@ def get_pokemon_info(pokemon_name):
         return None
 
 
+@st.cache_data
 def fuse_pokemon(pokemon1, pokemon2):
     stats_to_fuse = ['HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed']
 
@@ -336,6 +344,59 @@ def fuse_pokemon(pokemon1, pokemon2):
     return fused_pokemon
 
 
+@st.cache_data
+def get_type_coverage(input_moves: list[str]):
+    input_move_types = set()
+    for current_move in set(input_moves):
+        type, power = get_move_data(current_move.lower())
+        if power:
+            input_move_types.add(type)
+
+    covered_types = set()
+    resisted_types = set()
+    immune_types = set()
+    neutral_types = set()
+
+    all_types = {i.lower() for i in constants.TYPES}
+
+    for offensive_type in input_move_types:
+        # Get damage relations
+        damage_relations = get_type_data(offensive_type)['damage_relations']
+
+        double_damage_to = [item['name'] for item in damage_relations['double_damage_to']]
+        half_damage_to = [item['name'] for item in damage_relations['half_damage_to']]
+        no_damage_to = [item['name'] for item in damage_relations['no_damage_to']]
+
+        for defensive_type in all_types:
+            if defensive_type in double_damage_to:
+                covered_types.add(defensive_type)
+            elif defensive_type in half_damage_to and defensive_type not in covered_types and defensive_type not in neutral_types:
+                resisted_types.add(defensive_type)
+            elif defensive_type in no_damage_to and defensive_type not in covered_types and defensive_type not in neutral_types and defensive_type not in resisted_types:
+                immune_types.add(defensive_type)
+            elif defensive_type not in neutral_types and defensive_type not in covered_types:
+                neutral_types.add(defensive_type)
+
+        neutral_types -= covered_types
+
+        resisted_types -= covered_types
+        resisted_types -= neutral_types
+
+        immune_types -= covered_types
+        immune_types -= neutral_types
+        immune_types -= resisted_types
+
+    # return dict
+    moveset_damage_relations = {
+        'double_damage_to': list(covered_types),
+        'neutral_damage_to': list(neutral_types),
+        'half_damage_to': list(resisted_types),
+        'no_damage_to': list(immune_types),
+    }
+    return moveset_damage_relations
+
+
+@st.cache_data
 def analyze_single_type(input_pokemon, adjust_for_threat_score: bool):
     type_data = get_type_data(input_pokemon['primary_type'].lower())
 
@@ -389,6 +450,7 @@ def analyze_single_type(input_pokemon, adjust_for_threat_score: bool):
     return input_pokemon
 
 
+@st.cache_data
 def analyze_resistances(input_pokemon, adjust_for_threat_score: bool):
     type1, type2 = input_pokemon['primary_type'].lower(), input_pokemon['secondary_type'].lower()
 
@@ -484,11 +546,12 @@ def analyze_resistances(input_pokemon, adjust_for_threat_score: bool):
     return input_pokemon
 
 
+@st.cache_data
 def find_extreme_score_pairs(pair_scores, find_max=True):
     def backtrack(elements, current_score, current_pairs):
         nonlocal extreme_score, extreme_pairs
 
-        if not elements:
+        if not elements or len(elements) <= 1:
             if (find_max and current_score > extreme_score) or (not find_max and current_score < extreme_score):
                 extreme_score = current_score
                 extreme_pairs = current_pairs[:]
@@ -512,6 +575,7 @@ def find_extreme_score_pairs(pair_scores, find_max=True):
     return extreme_pairs
 
 
+@st.cache_data
 def transform_dataframe_to_weighted_pairs(df, weight_field):
     pair_scores = {}
 
