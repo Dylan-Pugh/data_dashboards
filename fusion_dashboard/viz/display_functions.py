@@ -3,6 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import requests
 import streamlit as st
+from data.constants import TYPES
 
 
 def build_BST_delta_scatter(input_data: pd.DataFrame):
@@ -117,9 +118,6 @@ def build_cumulative_stat_bar(input_data: pd.DataFrame):
 
 
 def build_weaknesses_scatter(input_data: pd.DataFrame):
-    # Define a list of types to consider
-    types_to_consider = ['Electric', 'Psychic', 'Fire', 'Water', 'Ice', 'Fighting', 'Grass', 'Ground', 'Dark', 'Ghost', 'Bug', 'Poison', 'Steel', 'Flying', 'Normal', 'Fairy', 'Dragon']
-
     # Initialize lists to store data for the scatter plot
     weakness_counts = []
     resist_or_immunity_counts = []
@@ -130,7 +128,7 @@ def build_weaknesses_scatter(input_data: pd.DataFrame):
     input_data['Immunities'] = input_data['Immunities'].fillna('')
 
     # Calculate the number of pairs weak to each type and the number of pairs that resist or are immune to each type
-    for pokemon_type in types_to_consider:
+    for pokemon_type in TYPES:
         # Count pairs weak to the type
         weak_to_type = input_data[input_data['Normal Weaknesses'].str.contains(pokemon_type, case=False, na=False) | input_data['Super Weaknesses'].str.contains(pokemon_type, case=False, na=False)]
         weakness_counts.append(len(weak_to_type))
@@ -140,7 +138,7 @@ def build_weaknesses_scatter(input_data: pd.DataFrame):
         resist_or_immunity_counts.append(len(resist_or_immunity_to_type))
 
     # Create a DataFrame for the scatter plot
-    scatter_df = pd.DataFrame({'Type': types_to_consider, 'Weakness Count': weakness_counts, 'Resist Count': resist_or_immunity_counts})
+    scatter_df = pd.DataFrame({'Type': TYPES, 'Weakness Count': weakness_counts, 'Resist Count': resist_or_immunity_counts})
 
     # Calculate the Danger score
     scatter_df['Danger'] = scatter_df['Weakness Count'] - scatter_df['Resist Count']
@@ -167,7 +165,7 @@ def build_weaknesses_scatter(input_data: pd.DataFrame):
     return fig
 
 
-def build_individual_weak_chart(input_data: pd.DataFrame):
+def build_individual_weak_chart(input_data: pd.DataFrame | list, extract_data: bool = True, invert_scale: bool = True):
     types = [
         'Normal Resistances',
         'Super Resistances',
@@ -180,40 +178,45 @@ def build_individual_weak_chart(input_data: pd.DataFrame):
     # Initialize an empty list to store data
     data = []
 
-    # Iterate through each row and type to create data points
-    for index, row in input_data.iterrows():
-        for type_name in types:
-            type_values = row[type_name]
-            if pd.notna(type_values) and type_values.strip() != '':
-                type_values = type_values.split(', ')
+    if extract_data:
+        # Iterate through each row and type to create data points
+        for index, row in input_data.iterrows():
+            for type_name in types:
+                type_values = row[type_name]
+                if pd.notna(type_values) and type_values.strip() != '':
+                    type_values = type_values.split(', ')
 
-                for val in type_values:
-                    if type_name == 'Normal Resistances':
-                        multiplier = 0.5
-                    elif type_name == 'Super Resistances':
-                        multiplier = 0.25
-                    elif type_name == 'Immunities':
-                        multiplier = 0
-                    elif type_name == 'Neutral Types':
-                        multiplier = 1
-                    elif type_name == 'Normal Weaknesses':
-                        multiplier = 2
-                    elif type_name == 'Super Weaknesses':
-                        multiplier = 4
+                    for val in type_values:
+                        if type_name == 'Normal Resistances':
+                            multiplier = 0.5
+                        elif type_name == 'Super Resistances':
+                            multiplier = 0.25
+                        elif type_name == 'Immunities':
+                            multiplier = 0
+                        elif type_name == 'Neutral Types':
+                            multiplier = 1
+                        elif type_name == 'Normal Weaknesses':
+                            multiplier = 2
+                        elif type_name == 'Super Weaknesses':
+                            multiplier = 4
 
-                    data.append({
-                        'Pokemon': f"{row['Head'].capitalize()} / {row['Body'].capitalize()}",
-                        'Type': val.capitalize(),
-                        'Category': multiplier,
-                    })
+                        data.append({
+                            'Pokemon': f"{row['Head'].capitalize()} / {row['Body'].capitalize()}",
+                            'Type': val.capitalize(),
+                            'Category': multiplier,
+                        })
+    else:
+        data = input_data
 
     # Create a DataFrame from the data list
     heatmap_df = pd.DataFrame(data)
 
     pivot = heatmap_df.pivot(index='Pokemon', columns='Type', values='Category').fillna(1)
 
+    color_ramp = 'RdYlGn_r' if invert_scale else 'RdYlGn'
+
     # Create a heatmap
-    fig = px.imshow(pivot, color_continuous_scale='RdYlGn_r', color_continuous_midpoint=1, text_auto=True, labels={'color': 'Multiplier'})
+    fig = px.imshow(pivot, color_continuous_scale=color_ramp, color_continuous_midpoint=1, text_auto=True, labels={'color': 'Multiplier'})
     fig.update_layout(
         title='Pokémon Weaknesses and Resistances',
         xaxis_title='Type',
