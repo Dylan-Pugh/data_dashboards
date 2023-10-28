@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from viz import display_functions
+from viz import display_functions, pokemon_tile
 from processing import fusion_functions
 
 st.set_page_config(layout='wide', page_icon=':bar_chart:')
@@ -55,6 +55,80 @@ def display_fusion_results(df):
     st.plotly_chart(weak_chart, use_container_width=True)
 
 
+def display_team_status():
+    st.header('Team Status', divider='rainbow')
+
+    col1, col2, col3 = st.columns([2, 2, 2])
+
+    for index, row in st.session_state['current_team'].iterrows():
+        if index < 2:
+            col = col1
+        elif index < 4:
+            col = col2
+        else:
+            col = col3
+
+        with col:
+            pokemon_tile.st_pokemon_tile(row)
+
+    if st.button(label='Calculate Type Coverage'):
+        coverage_data = []
+        combined_moveset = []
+        for current in st.session_state.keys():
+            if current.endswith('move_select'):
+                mon_coverage = fusion_functions.get_type_coverage(st.session_state[current])
+                combined_moveset += st.session_state[current]
+
+                # Parse current mon
+                head, body = current.split('/')[0], current.split('/')[1].split('_')[0]
+
+                # Parse out moveset coverage
+                for damage_relation in mon_coverage.keys():
+                    if damage_relation == 'double_damage_to':
+                        multiplier = 2
+                    elif damage_relation == 'neutral_damage_to':
+                        multiplier = 1
+                    elif damage_relation == 'half_damage_to':
+                        multiplier = 0.5
+                    elif damage_relation == 'no_damage_to':
+                        multiplier = 0
+
+                    for type in mon_coverage[damage_relation]:
+                        coverage_data.append({
+                            'Pokemon': f'{head} / {body}',
+                            'Type': type.capitalize(),
+                            'Category': multiplier,
+                        })
+
+        # Parse out moveset coverage
+        team_coverage = fusion_functions.get_type_coverage(combined_moveset)
+
+        for damage_relation in team_coverage.keys():
+            if damage_relation == 'double_damage_to':
+                multiplier = 2
+            elif damage_relation == 'neutral_damage_to':
+                multiplier = 1
+            elif damage_relation == 'half_damage_to':
+                multiplier = 0.5
+            elif damage_relation == 'no_damage_to':
+                multiplier = 0
+
+            for type in team_coverage[damage_relation]:
+                coverage_data.append({
+                    'Pokemon': 'Team',
+                    'Type': type.capitalize(),
+                    'Category': multiplier,
+                })
+
+        offfensive_coverage_chart = display_functions.build_individual_weak_chart(
+            input_data=coverage_data,
+            extract_data=False,
+            invert_scale=False,
+        )
+
+        st.plotly_chart(offfensive_coverage_chart, use_container_width=True)
+
+
 df = pd.read_csv('fusion_dashboard/data/current_dex.csv')
 
 if 'current_team' not in st.session_state:
@@ -103,5 +177,7 @@ if st.button('Analyze Team'):
     fused_team = fusion_functions.create_fused_team(fusion_pairs, adjust_for_threat_score)
     st.session_state['current_team'] = fused_team
     display_fusion_results(fused_team)
+    display_team_status()
 elif st.session_state['current_team'] is not None:
     display_fusion_results(st.session_state['current_team'])
+    display_team_status()
