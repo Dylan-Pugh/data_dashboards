@@ -47,7 +47,7 @@ def display_opponent_analysis(df, opponent_level):
     # Handle learnsets
     learnset = df['Learnset'].to_dict()
 
-    filtered_dict = {key: value for key, value in learnset[0].items() if key <= opponent_level}
+    filtered_dict = {key: value for key, value in learnset[0].items() if isinstance(key, int) and key <= opponent_level}
 
     # Extract all values into a list
     all_moves = [move for moves in filtered_dict.values() for move in moves]
