@@ -134,3 +134,4 @@ cython_debug/
 fusion_dashboard/data/current_team.csv
 fusion_dashboard/data/optimal_fusions.csv
 fusion_dashboard/data/possible_fusions.csv
+fusion_dashboard/pages/5_component_testing.py
