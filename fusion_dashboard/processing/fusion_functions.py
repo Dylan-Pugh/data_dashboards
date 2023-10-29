@@ -2,8 +2,7 @@ import json
 import pandas as pd
 import requests
 import streamlit as st
-from data import constants
-from fusion_dashboard.data import static_swaps
+from data import constants, static_swaps
 
 
 @st.cache_data
