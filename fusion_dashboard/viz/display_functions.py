@@ -258,6 +258,11 @@ def build_offensive_threat_scatter(input_data):
 
 
 @st.cache_data
+def build_level_cap_line(input_data):
+    pass
+
+
+@st.cache_data
 def display_sprite_with_fallback(head_pokedex_number, body_pokedex_number):
     # Attempt to display the image with error handling
     sprite_url_stub = 'https://gitlab.com/infinitefusion/sprites/-/raw/master/'
