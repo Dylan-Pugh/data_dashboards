@@ -3,6 +3,7 @@ import streamlit as st
 from viz.display_functions import display_sprite_with_fallback
 
 
+@st.cache_data
 def st_pokemon_tile(pokemon_df):
     with st.expander(label=f'{pokemon_df["Head"].capitalize()}/{pokemon_df["Body"].capitalize()}'):
         # Display the Pokemon image

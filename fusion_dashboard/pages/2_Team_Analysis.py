@@ -55,6 +55,7 @@ def display_fusion_results(df):
     st.plotly_chart(weak_chart, use_container_width=True)
 
 
+@st.cache_data
 def display_team_status():
     st.header('Team Status', divider='rainbow')
 
