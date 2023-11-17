@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 
 
@@ -27,5 +28,11 @@ with col2:
     ---
     """,
     )
+
+
+uploaded_file = st.file_uploader('Load Team CSV', type=['csv'])
+if uploaded_file is not None:
+    current_team = pd.read_csv(uploaded_file)
+    st.session_state['current_team'] = current_team
 
 st.sidebar.success('Select tool above.')
