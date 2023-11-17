@@ -17,7 +17,7 @@ def display_opponent_analysis(df, opponent_level):
     body = df['Body'].iloc[0]
     primary_type = df['Primary Type'].iloc[0]
     secondary_type = df['Secondary Type'].iloc[0]
-    BST = df['Bst'].iloc[0]
+    BST = df['BST'].iloc[0]
 
     if secondary_type and secondary_type != 'None':
         type_string = f'{primary_type.capitalize()}/{secondary_type.capitalize()}'
@@ -32,7 +32,7 @@ def display_opponent_analysis(df, opponent_level):
         st.header(f'Type: {type_string}')
         st.header(f'BST: {BST}')
     with col2:
-        display_functions.display_sprite_with_fallback(df.iloc[0]['Head Id'], df.loc[0]['Body Id'])
+        display_functions.display_sprite_with_fallback(df.iloc[0]['Head ID'], df.loc[0]['Body ID'])
     with col3:
         st.empty()
 
@@ -41,7 +41,7 @@ def display_opponent_analysis(df, opponent_level):
     st.plotly_chart(stats_bar, use_container_width=True)
 
     # Show weaknesses chart
-    weak_chart = display_functions.build_individual_weak_chart(df)
+    weak_chart = display_functions.build_type_relationship_chart(df)
     st.plotly_chart(weak_chart, use_container_width=True)
 
     # Handle learnsets
