@@ -12,7 +12,7 @@ def get_species_dex_dict():
 
 
 @st.cache_data
-def get_pokemon_df(input_pokemon):
+def get_pokemon_df(input_pokemon) -> pd.DataFrame:
     # Preprocess the input data
     for entry in input_pokemon:
         stats = entry.get('Stats')
@@ -28,11 +28,37 @@ def get_pokemon_df(input_pokemon):
 
     # Define the desired column order and rename columns
     column_order = [
-        'head', 'head_ID', 'body', 'body_ID', 'primary_type', 'secondary_type',
-        'HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed', 'BST',
-        'Effective_delta', 'Normal_Resistances', 'Super_Resistances', 'Immunities',
-        'Neutral_Types', 'Normal_Weaknesses', 'Super_Weaknesses',
-        'Total_resistances', 'Total_weaknesses', 'Learnset', 'Evoline',
+        'ID',
+        'head',
+        'head_ID',
+        'body',
+        'body_ID',
+        'primary_type',
+        'secondary_type',
+        'HP',
+        'Attack',
+        'Defense',
+        'Special Attack',
+        'Special Defense',
+        'Speed',
+        'BST',
+        'Effective_delta',
+        'Normal_Resistances',
+        'Super_Resistances',
+        'Immunities',
+        'Neutral_Types',
+        'Normal_Weaknesses',
+        'Super_Weaknesses',
+        'Total_resistances',
+        'Total_weaknesses',
+        'Learnset',
+        'Evoline',
+        'Current_Level',
+        'Moveset',
+        'Double_damage_to',
+        'Neutral_damage_to',
+        'Half_damage_to',
+        'No_damage_to',
     ]
 
     # Create a Pandas DataFrame from the list of dictionaries with reordered columns and renamed columns
@@ -41,7 +67,28 @@ def get_pokemon_df(input_pokemon):
     # Normalize column names (replace underscores with spaces and capitalize each word)
     df.columns = [col.replace('_', ' ').title() for col in df.columns]
 
+    # Rename special columns
+    df.rename(
+        columns={
+            'Id': 'ID',
+            'Head Id': 'Head ID',
+            'Body Id': 'Body ID',
+            'Hp': 'HP',
+            'Bst': 'BST',
+        },
+        inplace=True,
+    )
+
+    df.to_csv(
+        path_or_buf='fusion_dashboard/data/current_team.csv',
+        index=False,
+    )
     return df
+
+
+def get_team_csv(df):
+    # IMPORTANT: Cache the conversion to prevent computation on every rerun
+    return df.to_csv(index=False).encode('utf-8')
 
 
 @st.cache_data
@@ -82,17 +129,21 @@ def analyze_moveset(moves_list):
     # Iterate through the list of moves
     for move in moves_list:
         move_type, move_power = get_move_data(move)
-        move_details.append({
-            'Move': move,
-            'Type': move_type,
-            'Power': move_power,
-        })
+        move_details.append(
+            {
+                'Move': move,
+                'Type': move_type,
+                'Power': move_power,
+            },
+        )
 
     # Create a DataFrame from the list of move details
     move_details_df = pd.DataFrame(move_details)
 
     # Add a 'Caution' column based on the 'Power' column and the 'dangerous_moves' list
-    move_details_df['Caution'] = (move_details_df['Power'] >= 80) | (move_details_df['Move'].isin(constants.DANGEROUS_MOVES))
+    move_details_df['Caution'] = (move_details_df['Power'] >= 80) | (
+        move_details_df['Move'].isin(constants.DANGEROUS_MOVES)
+    )
 
     move_details_df['Move'] = move_details_df['Move'].str.capitalize()
     move_details_df['Type'] = move_details_df['Type'].str.capitalize()
@@ -155,6 +206,7 @@ def combine_learnsets(learnset1, learnset2):
     return combined_learnset
 
 
+@st.cache_data
 def get_evolution_levels(pokemon_name):
     # Step 1: Send an HTTP GET request to retrieve species information
     species_url = f'https://pokeapi.co/api/v2/pokemon-species/{pokemon_name}'
@@ -185,7 +237,14 @@ def get_evolution_levels(pokemon_name):
         if 'evolves_to' in current and len(current['evolves_to']) > 0:
             for evolution in current['evolves_to']:
                 evo_data = evolution['evolution_details'][0]
-                result = next((v for v in evo_data.values() if v or (isinstance(v, dict) and (v.get('name')))), None)
+                result = next(
+                    (
+                        v
+                        for v in evo_data.values()
+                        if v or (isinstance(v, dict) and (v.get('name')))
+                    ),
+                    None,
+                )
                 if result:
                     species = evolution['species']['name'].capitalize()
 
@@ -219,7 +278,9 @@ def get_pokemon_info(pokemon_name):
         data = response.json()
         species = data['species']['name']
         primary_type = data['types'][0]['type']['name']
-        secondary_type = data['types'][1]['type']['name'] if len(data['types']) > 1 else None
+        secondary_type = (
+            data['types'][1]['type']['name'] if len(data['types']) > 1 else None
+        )
         hp = data['stats'][0]['base_stat']
         attack = data['stats'][1]['base_stat']
         defense = data['stats'][2]['base_stat']
@@ -256,8 +317,12 @@ def get_pokemon_info(pokemon_name):
         }
 
         if species.lower() in map(str.lower, static_swaps.type_swaps.keys()):
-            pokemon_info['Primary Type'] = static_swaps.type_swaps[species]['primary_type']
-            pokemon_info['Secondary Type'] = static_swaps.type_swaps[species]['secondary_type']
+            pokemon_info['Primary Type'] = static_swaps.type_swaps[species][
+                'primary_type'
+            ]
+            pokemon_info['Secondary Type'] = static_swaps.type_swaps[species][
+                'secondary_type'
+            ]
 
         if species.lower() in map(str.lower, static_swaps.type_overrides.keys()):
             pokemon_info['Primary Type'] = static_swaps.type_overrides[species]
@@ -270,30 +335,45 @@ def get_pokemon_info(pokemon_name):
 
 @st.cache_data
 def fuse_pokemon(pokemon1, pokemon2):
-    stats_to_fuse = ['HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed']
+    stats_to_fuse = [
+        'HP',
+        'Attack',
+        'Defense',
+        'Special Attack',
+        'Special Defense',
+        'Speed',
+    ]
 
     fusion_1 = {
         'head': pokemon1['Species'],
         'body': pokemon2['Species'],
+        'ID': f"{pokemon1['ID']}/{pokemon2['ID']}",
         'head_ID': pokemon1['ID'],
         'body_ID': pokemon2['ID'],
         'primary_type': pokemon1['Primary Type'],
-        'secondary_type': pokemon2['Secondary Type'] if pokemon2['Secondary Type'] and pokemon2['Secondary Type'] != pokemon1['Primary Type'] else pokemon2['Primary Type'],
+        'secondary_type': pokemon2['Secondary Type']
+        if pokemon2['Secondary Type']
+        and pokemon2['Secondary Type'] != pokemon1['Primary Type']
+        else pokemon2['Primary Type'],
     }
 
     if pokemon1['Secondary Type'] != pokemon2['Primary Type']:
         fusion_2 = {
             'head': pokemon2['Species'],
             'body': pokemon1['Species'],
+            'ID': f"{pokemon2['ID']}/{pokemon1['ID']}",
             'head_ID': pokemon2['ID'],
             'body_ID': pokemon1['ID'],
             'primary_type': pokemon2['Primary Type'],
-            'secondary_type': pokemon1['Secondary Type'] if pokemon1['Secondary Type'] else pokemon1['Primary Type'],
+            'secondary_type': pokemon1['Secondary Type']
+            if pokemon1['Secondary Type']
+            else pokemon1['Primary Type'],
         }
     else:
         fusion_2 = {
             'head': pokemon2['Species'],
             'body': pokemon1['Species'],
+            'ID': f"{pokemon2['ID']}/{pokemon1['ID']}",
             'head_ID': pokemon2['ID'],
             'body_ID': pokemon1['ID'],
             'primary_type': pokemon2['Primary Type'],
@@ -362,18 +442,32 @@ def get_type_coverage(input_moves: list[str]):
         # Get damage relations
         damage_relations = get_type_data(offensive_type)['damage_relations']
 
-        double_damage_to = [item['name'] for item in damage_relations['double_damage_to']]
+        double_damage_to = [
+            item['name'] for item in damage_relations['double_damage_to']
+        ]
         half_damage_to = [item['name'] for item in damage_relations['half_damage_to']]
         no_damage_to = [item['name'] for item in damage_relations['no_damage_to']]
 
         for defensive_type in all_types:
             if defensive_type in double_damage_to:
                 covered_types.add(defensive_type)
-            elif defensive_type in half_damage_to and defensive_type not in covered_types and defensive_type not in neutral_types:
+            elif (
+                defensive_type in half_damage_to
+                and defensive_type not in covered_types
+                and defensive_type not in neutral_types
+            ):
                 resisted_types.add(defensive_type)
-            elif defensive_type in no_damage_to and defensive_type not in covered_types and defensive_type not in neutral_types and defensive_type not in resisted_types:
+            elif (
+                defensive_type in no_damage_to
+                and defensive_type not in covered_types
+                and defensive_type not in neutral_types
+                and defensive_type not in resisted_types
+            ):
                 immune_types.add(defensive_type)
-            elif defensive_type not in neutral_types and defensive_type not in covered_types:
+            elif (
+                defensive_type not in neutral_types
+                and defensive_type not in covered_types
+            ):
                 neutral_types.add(defensive_type)
 
         neutral_types -= covered_types
@@ -399,9 +493,15 @@ def get_type_coverage(input_moves: list[str]):
 def analyze_single_type(input_pokemon, adjust_for_threat_score: bool):
     type_data = get_type_data(input_pokemon['primary_type'].lower())
 
-    resistances = {entry['name'] for entry in type_data['damage_relations']['half_damage_from']}
-    immunities = {entry['name'] for entry in type_data['damage_relations']['no_damage_from']}
-    weaknesses = {entry['name'] for entry in type_data['damage_relations']['double_damage_from']}
+    resistances = {
+        entry['name'] for entry in type_data['damage_relations']['half_damage_from']
+    }
+    immunities = {
+        entry['name'] for entry in type_data['damage_relations']['no_damage_from']
+    }
+    weaknesses = {
+        entry['name'] for entry in type_data['damage_relations']['double_damage_from']
+    }
 
     # Here we enumerate if adjusting for threat score
     if adjust_for_threat_score:
@@ -423,19 +523,18 @@ def analyze_single_type(input_pokemon, adjust_for_threat_score: bool):
         for current_type in immunities:
             adjusted_immunities += threat_scores[current_type]
 
-        effective_delta = adjusted_resistances + (adjusted_immunities * 2) - adjusted_weaknesses
+        effective_delta = (
+            adjusted_resistances + (adjusted_immunities * 2) - adjusted_weaknesses
+        )
     else:
         # alt calculation here - immunities should count for 2
         effective_delta = (len(resistances) + (len(immunities) * 2)) - len(weaknesses)
 
     # Add in neutral types
     neutral_types = [
-        type.lower() for type in constants.TYPES
-        if type.lower() not in (
-            resistances |
-            immunities |
-            weaknesses
-        )
+        type.lower()
+        for type in constants.TYPES
+        if type.lower() not in (resistances | immunities | weaknesses)
     ]
 
     input_pokemon['Normal_Resistances'] = resistances
@@ -451,19 +550,34 @@ def analyze_single_type(input_pokemon, adjust_for_threat_score: bool):
 
 @st.cache_data
 def analyze_resistances(input_pokemon, adjust_for_threat_score: bool):
-    type1, type2 = input_pokemon['primary_type'].lower(), input_pokemon['secondary_type'].lower()
+    type1, type2 = (
+        input_pokemon['primary_type'].lower(),
+        input_pokemon['secondary_type'].lower(),
+    )
 
     type1_data = get_type_data(type1)
     type2_data = get_type_data(type2)
 
-    resistances1 = {entry['name'] for entry in type1_data['damage_relations']['half_damage_from']}
-    resistances2 = {entry['name'] for entry in type2_data['damage_relations']['half_damage_from']}
+    resistances1 = {
+        entry['name'] for entry in type1_data['damage_relations']['half_damage_from']
+    }
+    resistances2 = {
+        entry['name'] for entry in type2_data['damage_relations']['half_damage_from']
+    }
 
-    immunities1 = {entry['name'] for entry in type1_data['damage_relations']['no_damage_from']}
-    immunities2 = {entry['name'] for entry in type2_data['damage_relations']['no_damage_from']}
+    immunities1 = {
+        entry['name'] for entry in type1_data['damage_relations']['no_damage_from']
+    }
+    immunities2 = {
+        entry['name'] for entry in type2_data['damage_relations']['no_damage_from']
+    }
 
-    weaknesses1 = {entry['name'] for entry in type1_data['damage_relations']['double_damage_from']}
-    weaknesses2 = {entry['name'] for entry in type2_data['damage_relations']['double_damage_from']}
+    weaknesses1 = {
+        entry['name'] for entry in type1_data['damage_relations']['double_damage_from']
+    }
+    weaknesses2 = {
+        entry['name'] for entry in type2_data['damage_relations']['double_damage_from']
+    }
 
     combined_resistances = resistances1.union(resistances2)
     combined_weaknesses = weaknesses1.union(weaknesses2)
@@ -482,7 +596,9 @@ def analyze_resistances(input_pokemon, adjust_for_threat_score: bool):
     combined_weaknesses = combined_weaknesses - super_weak_types
 
     num_weak = len(combined_weaknesses) + len(super_weak_types)
-    num_resist = len(resisted_types) + len(super_resisted_types) + len(combined_immunities)
+    num_resist = (
+        len(resisted_types) + len(super_resisted_types) + len(combined_immunities)
+    )
 
     # Here we enumerate if adjusting for threat score
     if adjust_for_threat_score:
@@ -513,22 +629,32 @@ def analyze_resistances(input_pokemon, adjust_for_threat_score: bool):
             adjusted_combined_immunities += threat_scores[current_type]
 
         delta_weak = adjusted_weaknesses + (adjusted_super_weak * 2)
-        delta_resist = adjusted_resisted_types + adjusted_super_resisted_types + (adjusted_combined_immunities * 2)
+        delta_resist = (
+            adjusted_resisted_types
+            + adjusted_super_resisted_types
+            + (adjusted_combined_immunities * 2)
+        )
     else:
         delta_weak = len(combined_weaknesses) + (len(super_weak_types) * 2)
-        delta_resist = len(resisted_types) + len(super_resisted_types) + (len(combined_immunities) * 2)
+        delta_resist = (
+            len(resisted_types)
+            + len(super_resisted_types)
+            + (len(combined_immunities) * 2)
+        )
 
     effective_delta = delta_resist - delta_weak
 
     # Add in neutral types
     neutral_types = [
-        type.lower() for type in constants.TYPES
-        if type.lower() not in (
-            resisted_types |
-            super_resisted_types |
-            combined_immunities |
-            combined_weaknesses |
-            super_weak_types
+        type.lower()
+        for type in constants.TYPES
+        if type.lower()
+        not in (
+            resisted_types
+            | super_resisted_types
+            | combined_immunities
+            | combined_weaknesses
+            | super_weak_types
         )
     ]
 
@@ -551,7 +677,9 @@ def find_extreme_score_pairs(pair_scores, find_max=True):
         nonlocal extreme_score, extreme_pairs
 
         if not elements or len(elements) <= 1:
-            if (find_max and current_score > extreme_score) or (not find_max and current_score < extreme_score):
+            if (find_max and current_score > extreme_score) or (
+                not find_max and current_score < extreme_score
+            ):
                 extreme_score = current_score
                 extreme_pairs = current_pairs[:]
             return
@@ -611,14 +739,18 @@ def get_possible_fusions(pokemon_list, adjust_for_threat_score):
         # ('Charizard', 'Blastoise', 'fire', 'water')
         # here handle single type Pokemon, e.g. 'water', 'water'
         if not combination['secondary_type']:
-            single_type_pokemon = analyze_single_type(combination, adjust_for_threat_score)
+            single_type_pokemon = analyze_single_type(
+                combination, adjust_for_threat_score,
+            )
             analyzed_fusions.append(single_type_pokemon)
         else:
             fused = analyze_resistances(combination, adjust_for_threat_score)
             analyzed_fusions.append(fused)
 
     # Sort the list by effective delta, descending
-    analyzed_fusions = sorted(analyzed_fusions, key=lambda x: x['Effective_delta'], reverse=True)
+    analyzed_fusions = sorted(
+        analyzed_fusions, key=lambda x: x['Effective_delta'], reverse=True,
+    )
 
     output_df = get_pokemon_df(input_pokemon=analyzed_fusions)
     return output_df
@@ -639,7 +771,9 @@ def get_optimal_fusions(input_df, prioritized_metric):
     optimal_set = set(optimal_pairs)
 
     # Filter the DataFrame to only rows where the (Head, Body) tuple is in optimal_set
-    optimal_fusions = input_df[input_df[['Head', 'Body']].apply(tuple, axis=1).isin(optimal_set)]
+    optimal_fusions = input_df[
+        input_df[['Head', 'Body']].apply(tuple, axis=1).isin(optimal_set)
+    ]
 
     return optimal_fusions
 
@@ -666,15 +800,49 @@ def create_fused_team(pairs, adjust_for_threat_score):
         # ('Charizard', 'Blastoise', 'fire', 'water')
         # here handle single type Pokemon, e.g. 'water', 'water'
         if not combination['secondary_type']:
-            single_type_pokemon = analyze_single_type(combination, adjust_for_threat_score)
+            single_type_pokemon = analyze_single_type(
+                combination, adjust_for_threat_score,
+            )
             analyzed_fusions.append(single_type_pokemon)
         else:
             fused = analyze_resistances(combination, adjust_for_threat_score)
             analyzed_fusions.append(fused)
 
     # Sort the list by effective delta, descending
-    analyzed_fusions = sorted(analyzed_fusions, key=lambda x: x['Effective_delta'], reverse=True)
+    analyzed_fusions = sorted(
+        analyzed_fusions, key=lambda x: x['Effective_delta'], reverse=True,
+    )
 
     team_df = get_pokemon_df(input_pokemon=analyzed_fusions)
 
     return team_df
+
+
+@st.cache_data
+def calc_team_coverage(team_df: pd.DataFrame):
+    combined_moveset = []
+
+    for index, pokemon in team_df.iterrows():
+        level_key = f"{pokemon['ID']}_level_select"
+        moveset_key = f"{pokemon['ID']}_move_select"
+
+        if level_key in st.session_state:
+            current_level = st.session_state[level_key]
+            team_df.at[index, 'Current Level'] = current_level
+
+        if moveset_key in st.session_state:
+            current_moveset = st.session_state[moveset_key]
+
+            mon_coverage = get_type_coverage(current_moveset)
+            combined_moveset += current_moveset
+
+            # Parse out moveset coverage
+            for key, value in mon_coverage.items():
+                modified_key = key.replace('_', ' ').title()
+                team_df.at[index, modified_key] = ', '.join(value)
+
+            team_df.at[index, 'Moveset'] = ', '.join(current_moveset)
+
+    # Add in combined moveset for team coverage
+
+    st.session_state['current_team'] = team_df
