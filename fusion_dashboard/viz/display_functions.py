@@ -9,13 +9,13 @@ from data.constants import TYPES
 def build_BST_delta_scatter(input_data: pd.DataFrame):
     # Calculate a combined color value based on 'Effective Delta' and 'BST'
     # You can customize the calculation as needed
-    input_data['Composite Strength'] = ((input_data['Effective Delta'] * 15) + input_data['Bst']) / 2
+    input_data['Composite Strength'] = ((input_data['Effective Delta'] * 15) + input_data['BST']) / 2
 
     # Create a scatter plot with hover text using plotly
     fig = px.scatter(
         input_data,
         x='Effective Delta',
-        y='Bst',
+        y='BST',
         color='Composite Strength',
         color_continuous_scale='RdYlGn',  # Green to red color scale
         title='Effective Delta vs. BST',
@@ -30,9 +30,15 @@ def build_BST_delta_scatter(input_data: pd.DataFrame):
 
 
 def build_BST_stacked_bar(input_data: pd.DataFrame):
-
     # Define the stats columns in the desired order
-    stats_columns = ['Hp', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed']
+    stats_columns = [
+        'HP',
+        'Attack',
+        'Defense',
+        'Special Attack',
+        'Special Defense',
+        'Speed',
+    ]
 
     # Create a list to store the data for each stat
     data = []
@@ -71,7 +77,14 @@ def build_BST_stacked_bar(input_data: pd.DataFrame):
 
 def build_individual_stat_bars(input_data: pd.DataFrame):
     # Define the stats columns in the desired order
-    stats_columns = ['Hp', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed']
+    stats_columns = [
+        'HP',
+        'Attack',
+        'Defense',
+        'Special Attack',
+        'Special Defense',
+        'Speed',
+    ]
     stat_values = input_data[stats_columns].iloc[0].values
 
     # Create a DataFrame for plotting
@@ -97,7 +110,7 @@ def build_individual_stat_bars(input_data: pd.DataFrame):
 
 def build_cumulative_stat_bar(input_data: pd.DataFrame):
     # Calculate the cumulative values for each stat
-    stats = ['Hp', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed']
+    stats = ['HP', 'Attack', 'Defense', 'Special Attack', 'Special Defense', 'Speed']
     cumulative_stats = input_data[stats].sum()
 
     # Sort the cumulative stats in descending order
@@ -130,29 +143,60 @@ def build_weaknesses_scatter(input_data: pd.DataFrame):
     # Calculate the number of pairs weak to each type and the number of pairs that resist or are immune to each type
     for pokemon_type in TYPES:
         # Count pairs weak to the type
-        weak_to_type = input_data[input_data['Normal Weaknesses'].str.contains(pokemon_type, case=False, na=False) | input_data['Super Weaknesses'].str.contains(pokemon_type, case=False, na=False)]
+        weak_to_type = input_data[
+            input_data['Normal Weaknesses'].str.contains(
+                pokemon_type, case=False, na=False,
+            )
+            | input_data['Super Weaknesses'].str.contains(
+                pokemon_type, case=False, na=False,
+            )
+        ]
         weakness_counts.append(len(weak_to_type))
 
         # Count pairs that resist or are immune to the type
-        resist_or_immunity_to_type = input_data[input_data['Normal Resistances'].str.contains(pokemon_type, case=False, na=False) | input_data['Super Resistances'].str.contains(pokemon_type, case=False, na=False) | input_data['Immunities'].str.contains(pokemon_type, case=False, na=False)]
+        resist_or_immunity_to_type = input_data[
+            input_data['Normal Resistances'].str.contains(
+                pokemon_type, case=False, na=False,
+            )
+            | input_data['Super Resistances'].str.contains(
+                pokemon_type, case=False, na=False,
+            )
+            | input_data['Immunities'].str.contains(pokemon_type, case=False, na=False)
+        ]
         resist_or_immunity_counts.append(len(resist_or_immunity_to_type))
 
     # Create a DataFrame for the scatter plot
-    scatter_df = pd.DataFrame({'Type': TYPES, 'Weakness Count': weakness_counts, 'Resist Count': resist_or_immunity_counts})
+    scatter_df = pd.DataFrame(
+        {
+            'Type': TYPES,
+            'Weakness Count': weakness_counts,
+            'Resist Count': resist_or_immunity_counts,
+        },
+    )
 
     # Calculate the Danger score
     scatter_df['Danger'] = scatter_df['Weakness Count'] - scatter_df['Resist Count']
 
     # Group the records and combine the 'Type' values
-    grouped_records = scatter_df.groupby(['Weakness Count', 'Resist Count'])['Type'].apply('/'.join).reset_index()
+    grouped_records = (
+        scatter_df.groupby(['Weakness Count', 'Resist Count'])['Type']
+        .apply('/'.join)
+        .reset_index()
+    )
 
     # Create a 'Danger' column based on the Danger score for coloring
-    grouped_records['Danger'] = grouped_records['Weakness Count'] - grouped_records['Resist Count']
+    grouped_records['Danger'] = (
+        grouped_records['Weakness Count'] - grouped_records['Resist Count']
+    )
 
     # Create a scatter plot with color ramp
     fig = px.scatter(
-        grouped_records, x='Weakness Count', y='Resist Count', text='Type',
-        color='Danger', color_continuous_scale='RdYlGn_r',
+        grouped_records,
+        x='Weakness Count',
+        y='Resist Count',
+        text='Type',
+        color='Danger',
+        color_continuous_scale='RdYlGn_r',
         title='Team Weaknesses vs. Resistances',
     )
 
@@ -165,8 +209,10 @@ def build_weaknesses_scatter(input_data: pd.DataFrame):
     return fig
 
 
-def build_individual_weak_chart(input_data: pd.DataFrame | list, extract_data: bool = True, invert_scale: bool = True):
-    types = [
+def build_type_relationship_chart(
+    input_data: pd.DataFrame | list, extract_data: bool = True, invert: bool = True,
+):
+    weakness_relations = [
         'Normal Resistances',
         'Super Resistances',
         'Normal Weaknesses',
@@ -174,6 +220,15 @@ def build_individual_weak_chart(input_data: pd.DataFrame | list, extract_data: b
         'Immunities',
         'Neutral Types',
     ]
+
+    offensive_relations = [
+        'Double Damage To',
+        'Neutral Damage To',
+        'Half Damage To',
+        'No Damage To',
+    ]
+
+    types = weakness_relations if invert else offensive_relations
 
     # Initialize an empty list to store data
     data = []
@@ -187,44 +242,66 @@ def build_individual_weak_chart(input_data: pd.DataFrame | list, extract_data: b
                     type_values = type_values.split(', ')
 
                     for val in type_values:
-                        if type_name == 'Normal Resistances':
+                        if (
+                            type_name == 'Normal Resistances'
+                            or type_name == 'Half Damage To'
+                        ):
                             multiplier = 0.5
                         elif type_name == 'Super Resistances':
                             multiplier = 0.25
-                        elif type_name == 'Immunities':
+                        elif type_name == 'Immunities' or type_name == 'No Damage To':
                             multiplier = 0
-                        elif type_name == 'Neutral Types':
+                        elif (
+                            type_name == 'Neutral Types'
+                            or type_name == 'Neutral Damage To'
+                        ):
                             multiplier = 1
-                        elif type_name == 'Normal Weaknesses':
+                        elif (
+                            type_name == 'Normal Weaknesses'
+                            or type_name == 'Double Damage To'
+                        ):
                             multiplier = 2
                         elif type_name == 'Super Weaknesses':
                             multiplier = 4
 
-                        data.append({
-                            'Pokemon': f"{row['Head'].capitalize()} / {row['Body'].capitalize()}",
-                            'Type': val.capitalize(),
-                            'Category': multiplier,
-                        })
+                        data.append(
+                            {
+                                'Pokemon': f"{row['Head'].capitalize()} / {row['Body'].capitalize()}",
+                                'Type': val.capitalize(),
+                                'Category': multiplier,
+                            },
+                        )
     else:
         data = input_data
 
     # Create a DataFrame from the data list
     heatmap_df = pd.DataFrame(data)
 
-    pivot = heatmap_df.pivot(index='Pokemon', columns='Type', values='Category').fillna(1)
+    pivot = heatmap_df.pivot(index='Pokemon', columns='Type', values='Category').fillna(
+        1,
+    )
 
-    color_ramp = 'RdYlGn_r' if invert_scale else 'RdYlGn'
+    color_ramp = 'RdYlGn_r' if invert else 'RdYlGn'
+    chart_title = (
+        'Pokémon Weaknesses and Resistances' if invert else 'Offensive Type Coverage'
+    )
 
     # Create a heatmap
-    fig = px.imshow(pivot, color_continuous_scale=color_ramp, color_continuous_midpoint=1, text_auto=True, labels={'color': 'Multiplier'})
+    fig = px.imshow(
+        pivot,
+        color_continuous_scale=color_ramp,
+        color_continuous_midpoint=1,
+        text_auto=True,
+        labels={'color': 'Multiplier'},
+    )
     fig.update_layout(
-        title='Pokémon Weaknesses and Resistances',
+        title=chart_title,
         xaxis_title='Type',
         yaxis_title='Pokémon',
         xaxis_nticks=len(heatmap_df['Type'].unique()),  # Display all Types
-        yaxis_nticks=len(heatmap_df['Pokemon'].unique()),      # Display all Pokemon
+        yaxis_nticks=len(heatmap_df['Pokemon'].unique()),  # Display all Pokemon
         xaxis_showticklabels=True,  # Show Pokemon names
-        yaxis_showticklabels=True,   # Show Type names
+        yaxis_showticklabels=True,  # Show Type names
     )
 
     return fig
@@ -239,7 +316,10 @@ def build_offensive_threat_scatter(input_data):
 
     # Create a scatter plot using Plotly Express
     fig = px.scatter(
-        df, x='Types', y='Scores', color='Scores',
+        df,
+        x='Types',
+        y='Scores',
+        color='Scores',
         color_continuous_scale='RdYlGn_r',
         labels={'Scores': 'Threat Score'},
         title='Composite Offensive Threat Scores for All Types',
