@@ -11,18 +11,21 @@ def display_fusion_results(df):
     st.header('Analysis', divider='rainbow')
     # Display table of fusions
     st.dataframe(
-        df, use_container_width=True, hide_index=True, column_order=[
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_order=[
             'Head',
             'Body',
             'Primary Type',
             'Secondary Type',
-            'Hp',
+            'HP',
             'Attack',
             'Defense',
             'Special Attack',
             'Special Defense',
             'Speed',
-            'Bst',
+            'BST',
             'Effective Delta',
             'Total Resistances',
             'Total Weaknesses',
@@ -51,11 +54,11 @@ def display_fusion_results(df):
     st.plotly_chart(weak_scatter, use_container_width=True)
 
     # Show weaknesses chart
-    weak_chart = display_functions.build_individual_weak_chart(df)
+    weak_chart = display_functions.build_type_relationship_chart(df)
     st.plotly_chart(weak_chart, use_container_width=True)
 
 
-@st.cache_data
+# @st.cache_data
 def display_team_status():
     st.header('Team Status', divider='rainbow')
 
@@ -72,62 +75,18 @@ def display_team_status():
         with col:
             pokemon_tile.st_pokemon_tile(row)
 
-    if st.button(label='Calculate Type Coverage'):
-        coverage_data = []
-        combined_moveset = []
-        for current in st.session_state.keys():
-            if current.endswith('move_select'):
-                mon_coverage = fusion_functions.get_type_coverage(st.session_state[current])
-                combined_moveset += st.session_state[current]
+    if (
+        st.button(label='Update & Calculate Type Coverage')
+        or st.session_state['current_team'] is not None
+    ):
+        fusion_functions.calc_team_coverage(st.session_state['current_team'])
 
-                # Parse current mon
-                head, body = current.split('/')[0], current.split('/')[1].split('_')[0]
-
-                # Parse out moveset coverage
-                for damage_relation in mon_coverage.keys():
-                    if damage_relation == 'double_damage_to':
-                        multiplier = 2
-                    elif damage_relation == 'neutral_damage_to':
-                        multiplier = 1
-                    elif damage_relation == 'half_damage_to':
-                        multiplier = 0.5
-                    elif damage_relation == 'no_damage_to':
-                        multiplier = 0
-
-                    for type in mon_coverage[damage_relation]:
-                        coverage_data.append({
-                            'Pokemon': f'{head} / {body}',
-                            'Type': type.capitalize(),
-                            'Category': multiplier,
-                        })
-
-        # Parse out moveset coverage
-        team_coverage = fusion_functions.get_type_coverage(combined_moveset)
-
-        for damage_relation in team_coverage.keys():
-            if damage_relation == 'double_damage_to':
-                multiplier = 2
-            elif damage_relation == 'neutral_damage_to':
-                multiplier = 1
-            elif damage_relation == 'half_damage_to':
-                multiplier = 0.5
-            elif damage_relation == 'no_damage_to':
-                multiplier = 0
-
-            for type in team_coverage[damage_relation]:
-                coverage_data.append({
-                    'Pokemon': 'Team',
-                    'Type': type.capitalize(),
-                    'Category': multiplier,
-                })
-
-        offfensive_coverage_chart = display_functions.build_individual_weak_chart(
-            input_data=coverage_data,
-            extract_data=False,
-            invert_scale=False,
+        offensive_coverage_chart = display_functions.build_type_relationship_chart(
+            input_data=st.session_state['current_team'],
+            invert=False,
         )
 
-        st.plotly_chart(offfensive_coverage_chart, use_container_width=True)
+        st.plotly_chart(offensive_coverage_chart, use_container_width=True)
 
 
 df = pd.read_csv('fusion_dashboard/data/current_dex.csv')
@@ -174,8 +133,18 @@ for pair in fusion_pairs:
 
 adjust_for_threat_score = st.toggle(label='Adjust for threat scores', value=False)
 
+if st.session_state['current_team'] is not None:
+    st.download_button(
+        label='Download Team',
+        data=fusion_functions.get_team_csv(st.session_state['current_team']),
+        file_name='current_team.csv',
+        mime='text/csv',
+    )
+
 if st.button('Analyze Team'):
-    fused_team = fusion_functions.create_fused_team(fusion_pairs, adjust_for_threat_score)
+    fused_team = fusion_functions.create_fused_team(
+        fusion_pairs, adjust_for_threat_score,
+    )
     st.session_state['current_team'] = fused_team
     display_fusion_results(fused_team)
     display_team_status()
