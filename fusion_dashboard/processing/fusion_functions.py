@@ -15,12 +15,6 @@ def get_species_dex_dict():
 def get_pokemon_df(input_pokemon) -> pd.DataFrame:
     # Preprocess the input data
     for entry in input_pokemon:
-        stats = entry.get('Stats')
-        if stats:
-            # Convert stats from a dictionary to separate columns
-            entry.update(stats)
-            entry.pop('Stats')
-
         # Remove curly braces from sets and convert to comma-separated strings
         for key, value in entry.items():
             if isinstance(value, set):
@@ -281,22 +275,13 @@ def get_pokemon_info(pokemon_name):
         secondary_type = (
             data['types'][1]['type']['name'] if len(data['types']) > 1 else None
         )
-        hp = data['stats'][0]['base_stat']
+        HP = data['stats'][0]['base_stat']
         attack = data['stats'][1]['base_stat']
         defense = data['stats'][2]['base_stat']
         special_attack = data['stats'][3]['base_stat']
         special_defense = data['stats'][4]['base_stat']
         speed = data['stats'][5]['base_stat']
         base_stat_total = sum(stat['base_stat'] for stat in data['stats'])
-
-        stats = {
-            'HP': hp,
-            'Attack': attack,
-            'Defense': defense,
-            'Special Attack': special_attack,
-            'Special Defense': special_defense,
-            'Speed': speed,
-        }
 
         # override for all Normal/Flying types
         if primary_type == 'normal' and secondary_type == 'flying':
@@ -310,7 +295,12 @@ def get_pokemon_info(pokemon_name):
             'ID': species_dex_lookup[species],
             'Primary Type': primary_type,
             'Secondary Type': secondary_type,
-            'Stats': stats,
+            'HP': HP,
+            'Attack': attack,
+            'Defense': defense,
+            'Special Attack': special_attack,
+            'Special Defense': special_defense,
+            'Speed': speed,
             'BST': base_stat_total,
             'Learnset': extract_learnset(data['moves']),
             'Evoline': get_evolution_levels(species),
@@ -347,7 +337,7 @@ def fuse_pokemon(pokemon1, pokemon2):
     fusion_1 = {
         'head': pokemon1['Species'],
         'body': pokemon2['Species'],
-        'ID': f"{pokemon1['ID']}/{pokemon2['ID']}",
+        'ID': float(f"{pokemon1['ID']}.{pokemon2['ID']}"),
         'head_ID': pokemon1['ID'],
         'body_ID': pokemon2['ID'],
         'primary_type': pokemon1['Primary Type'],
@@ -361,7 +351,7 @@ def fuse_pokemon(pokemon1, pokemon2):
         fusion_2 = {
             'head': pokemon2['Species'],
             'body': pokemon1['Species'],
-            'ID': f"{pokemon2['ID']}/{pokemon1['ID']}",
+            'ID': float(f"{pokemon2['ID']}.{pokemon1['ID']}"),
             'head_ID': pokemon2['ID'],
             'body_ID': pokemon1['ID'],
             'primary_type': pokemon2['Primary Type'],
@@ -373,7 +363,7 @@ def fuse_pokemon(pokemon1, pokemon2):
         fusion_2 = {
             'head': pokemon2['Species'],
             'body': pokemon1['Species'],
-            'ID': f"{pokemon2['ID']}/{pokemon1['ID']}",
+            'ID': float(f"{pokemon2['ID']}.{pokemon1['ID']}"),
             'head_ID': pokemon2['ID'],
             'body_ID': pokemon1['ID'],
             'primary_type': pokemon2['Primary Type'],
@@ -397,17 +387,19 @@ def fuse_pokemon(pokemon1, pokemon2):
             body = pokemon1
 
         for current_stat in stats_to_fuse:
-            head_stat = head['Stats'][current_stat]
-            body_stat = body['Stats'][current_stat]
+            head_stat = head[current_stat]
+            body_stat = body[current_stat]
 
             if current_stat in ['Attack', 'Defense', 'Speed']:
                 fusion_stats[current_stat] = int((2 * body_stat / 3) + (head_stat / 3))
             else:
                 fusion_stats[current_stat] = int((2 * head_stat / 3) + (body_stat / 3))
 
+        for current_stat in fusion_stats.keys():
+            fusion[current_stat] = fusion_stats[current_stat]
+
         base_stat_total = sum(fusion_stats.values())
 
-        fusion['Stats'] = fusion_stats
         fusion['BST'] = base_stat_total
 
         # Check that we don't have duplicate types
@@ -541,7 +533,9 @@ def analyze_single_type(input_pokemon, adjust_for_threat_score: bool):
     input_pokemon['Immunities'] = immunities
     input_pokemon['Neutral_Types'] = set(neutral_types)
     input_pokemon['Normal_Weaknesses'] = weaknesses
+    input_pokemon['Super_Weaknesses'] = set()
     input_pokemon['Total_resistances'] = len(resistances)
+    input_pokemon['Super_Resistances'] = set()
     input_pokemon['Total_weaknesses'] = len(weaknesses)
     input_pokemon['Effective_delta'] = effective_delta
 
@@ -808,6 +802,56 @@ def create_fused_team(pairs, adjust_for_threat_score):
             fused = analyze_resistances(combination, adjust_for_threat_score)
             analyzed_fusions.append(fused)
 
+    # Create special 'team' entry
+    keys_to_sum = [
+                   'HP',
+                   'Attack',
+                   'Defense',
+                   'Special Attack',
+                   'Special Defense',
+                   'Speed',
+                   'BST',
+                   'Total_resistances',
+                   'Total_weaknesses',
+                   'Effective_delta',
+    ]
+
+    team_totals = {key: sum(d[key] for d in analyzed_fusions) for key in keys_to_sum}
+
+    team_totals['ID'] = 0
+    team_totals['Normal_Resistances'] = set()
+    team_totals['Super_Resistances'] = set()
+    team_totals['Immunities'] = set()
+    team_totals['Neutral_Types'] = set()
+    team_totals['Normal_Weaknesses'] = set()
+    team_totals['Super_Weaknesses'] = set()
+
+    for fusion in analyzed_fusions:
+        team_totals['Normal_Resistances'].update(fusion['Normal_Resistances'])
+        team_totals['Super_Resistances'].update(fusion['Super_Resistances'])
+        team_totals['Immunities'].update(fusion['Immunities'])
+        team_totals['Neutral_Types'].update(fusion['Neutral_Types'])
+        team_totals['Normal_Weaknesses'].update(fusion['Normal_Weaknesses'])
+        team_totals['Super_Weaknesses'].update(fusion['Super_Weaknesses'])
+
+    running_total = set()
+    running_total.update(team_totals['Immunities'])
+
+    team_totals['Super_Resistances'] = team_totals['Super_Resistances'] - running_total
+    running_total.update(team_totals['Super_Resistances'])
+
+    team_totals['Normal_Resistances'] = team_totals['Normal_Resistances'] - running_total
+    running_total.update(team_totals['Normal_Resistances'])
+
+    team_totals['Neutral_Types'] = team_totals['Neutral_Types'] - running_total
+    running_total.update(team_totals['Neutral_Types'])
+
+    team_totals['Normal_Weaknesses'] = team_totals['Normal_Weaknesses'] - running_total
+    running_total.update(team_totals['Normal_Weaknesses'])
+
+    team_totals['Super_Weaknesses'] = team_totals['Super_Weaknesses'] - running_total
+
+    analyzed_fusions.append(team_totals)
     # Sort the list by effective delta, descending
     analyzed_fusions = sorted(
         analyzed_fusions, key=lambda x: x['Effective_delta'], reverse=True,
@@ -821,8 +865,13 @@ def create_fused_team(pairs, adjust_for_threat_score):
 @st.cache_data
 def calc_team_coverage(team_df: pd.DataFrame):
     combined_moveset = []
+    team_index = 0
 
     for index, pokemon in team_df.iterrows():
+        if pokemon['ID'] == 0:
+            team_index = index
+            continue
+
         level_key = f"{pokemon['ID']}_level_select"
         moveset_key = f"{pokemon['ID']}_move_select"
 
@@ -844,5 +893,11 @@ def calc_team_coverage(team_df: pd.DataFrame):
             team_df.at[index, 'Moveset'] = ', '.join(current_moveset)
 
     # Add in combined moveset for team coverage
+    team_coverage = get_type_coverage(combined_moveset)
+
+    # Parse out moveset coverage
+    for key, value in team_coverage.items():
+        modified_key = key.replace('_', ' ').title()
+        team_df.at[team_index, modified_key] = ', '.join(value)
 
     st.session_state['current_team'] = team_df
