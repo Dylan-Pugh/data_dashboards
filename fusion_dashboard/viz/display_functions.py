@@ -236,6 +236,11 @@ def build_type_relationship_chart(
     if extract_data:
         # Iterate through each row and type to create data points
         for index, row in input_data.iterrows():
+            if row['ID'] == 0:
+                name_for_chart = 'Team'
+            else:
+                name_for_chart = f"{row['Head'].capitalize()} / {row['Body'].capitalize()}"
+
             for type_name in types:
                 type_values = row[type_name]
                 if pd.notna(type_values) and type_values.strip() != '':
@@ -266,7 +271,7 @@ def build_type_relationship_chart(
 
                         data.append(
                             {
-                                'Pokemon': f"{row['Head'].capitalize()} / {row['Body'].capitalize()}",
+                                'Pokemon': name_for_chart,
                                 'Type': val.capitalize(),
                                 'Category': multiplier,
                             },
@@ -277,34 +282,41 @@ def build_type_relationship_chart(
     # Create a DataFrame from the data list
     heatmap_df = pd.DataFrame(data)
 
-    pivot = heatmap_df.pivot(index='Pokemon', columns='Type', values='Category').fillna(
-        1,
-    )
+    if not heatmap_df.empty:
+        # Move the row where 'Pokemon' == 'Team' to the bottom
+        heatmap_df = pd.concat([
+            heatmap_df[heatmap_df['Pokemon'] != 'Team'],
+            heatmap_df[heatmap_df['Pokemon'] == 'Team'],
+        ])
 
-    color_ramp = 'RdYlGn_r' if invert else 'RdYlGn'
-    chart_title = (
-        'Pokémon Weaknesses and Resistances' if invert else 'Offensive Type Coverage'
-    )
+        pivot = heatmap_df.pivot(index='Pokemon', columns='Type', values='Category').fillna(
+            1,
+        )
 
-    # Create a heatmap
-    fig = px.imshow(
-        pivot,
-        color_continuous_scale=color_ramp,
-        color_continuous_midpoint=1,
-        text_auto=True,
-        labels={'color': 'Multiplier'},
-    )
-    fig.update_layout(
-        title=chart_title,
-        xaxis_title='Type',
-        yaxis_title='Pokémon',
-        xaxis_nticks=len(heatmap_df['Type'].unique()),  # Display all Types
-        yaxis_nticks=len(heatmap_df['Pokemon'].unique()),  # Display all Pokemon
-        xaxis_showticklabels=True,  # Show Pokemon names
-        yaxis_showticklabels=True,  # Show Type names
-    )
+        color_ramp = 'RdYlGn_r' if invert else 'RdYlGn'
+        chart_title = (
+            'Pokémon Weaknesses and Resistances' if invert else 'Offensive Type Coverage'
+        )
 
-    return fig
+        # Create a heatmap
+        fig = px.imshow(
+            pivot,
+            color_continuous_scale=color_ramp,
+            color_continuous_midpoint=1,
+            text_auto=True,
+            labels={'color': 'Multiplier'},
+        )
+        fig.update_layout(
+            title=chart_title,
+            xaxis_title='Type',
+            yaxis_title='Pokémon',
+            xaxis_nticks=len(heatmap_df['Type'].unique()),  # Display all Types
+            yaxis_nticks=len(heatmap_df['Pokemon'].unique()),  # Display all Pokemon
+            xaxis_showticklabels=True,  # Show Pokemon names
+            yaxis_showticklabels=True,  # Show Type names
+        )
+
+        return fig
 
 
 def build_offensive_threat_scatter(input_data):
