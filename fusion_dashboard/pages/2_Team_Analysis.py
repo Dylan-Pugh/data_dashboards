@@ -8,10 +8,13 @@ st.set_page_config(layout='wide', page_icon=':bar_chart:')
 
 @st.cache_data
 def display_fusion_results(df):
+    # Filter out the 'Team' entry
+    filtered_df = df[df['ID'] != 0].copy()
+
     st.header('Analysis', divider='rainbow')
     # Display table of fusions
     st.dataframe(
-        df,
+        filtered_df,
         use_container_width=True,
         hide_index=True,
         column_order=[
@@ -38,19 +41,19 @@ def display_fusion_results(df):
     )
 
     # Show scatter plot
-    scatter = display_functions.build_BST_delta_scatter(df)
+    scatter = display_functions.build_BST_delta_scatter(filtered_df)
     st.plotly_chart(scatter, use_container_width=True)
 
     # Show stacked bar plot
-    stacked_bar = display_functions.build_BST_stacked_bar(df)
+    stacked_bar = display_functions.build_BST_stacked_bar(filtered_df)
     st.plotly_chart(stacked_bar, use_container_width=True)
 
     # Show cumulative stats bar
-    cumulative_bar = display_functions.build_cumulative_stat_bar(df)
+    cumulative_bar = display_functions.build_cumulative_stat_bar(filtered_df)
     st.plotly_chart(cumulative_bar, use_container_width=True)
 
     # Show weaknesses scatter
-    weak_scatter = display_functions.build_weaknesses_scatter(df)
+    weak_scatter = display_functions.build_weaknesses_scatter(filtered_df)
     st.plotly_chart(weak_scatter, use_container_width=True)
 
     # Show weaknesses chart
@@ -61,19 +64,6 @@ def display_fusion_results(df):
 # @st.cache_data
 def display_team_status():
     st.header('Team Status', divider='rainbow')
-
-    col1, col2, col3 = st.columns([2, 2, 2])
-
-    for index, row in st.session_state['current_team'].iterrows():
-        if index < 2:
-            col = col1
-        elif index < 4:
-            col = col2
-        else:
-            col = col3
-
-        with col:
-            pokemon_tile.st_pokemon_tile(row)
 
     if (
         st.button(label='Update & Calculate Type Coverage')
@@ -86,7 +76,25 @@ def display_team_status():
             invert=False,
         )
 
-        st.plotly_chart(offensive_coverage_chart, use_container_width=True)
+        if offensive_coverage_chart is not None:
+            st.plotly_chart(offensive_coverage_chart, use_container_width=True)
+
+    col1, col2, col3 = st.columns([2, 2, 2])
+
+    for index, row in st.session_state['current_team'].iterrows():
+
+        if row['ID'] == 0:
+            continue
+
+        if index == 1 or index == 4:
+            col = col1
+        elif index == 2 or index == 5:
+            col = col2
+        else:
+            col = col3
+
+        with col:
+            pokemon_tile.st_pokemon_tile(row)
 
 
 df = pd.read_csv('fusion_dashboard/data/current_dex.csv')
@@ -101,10 +109,10 @@ if st.session_state['current_team'] is not None:
     # Initialize with current data, if it exists
     current_team = st.session_state['current_team']
 
-    default_heads = current_team['Head'].tolist()
+    default_heads = [value for value in current_team['Head'].tolist() if isinstance(value, str)]
     default_heads = [head.capitalize() for head in default_heads]
 
-    default_bodies = current_team['Body'].tolist()
+    default_bodies = [value for value in current_team['Body'].tolist() if isinstance(value, str)]
     default_bodies = [body.capitalize() for body in default_bodies]
 
 head_options = df['NAME'].to_list()
