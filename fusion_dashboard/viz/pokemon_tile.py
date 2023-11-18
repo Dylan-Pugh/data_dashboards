@@ -7,11 +7,12 @@ from viz.display_functions import display_sprite_with_fallback
 def st_pokemon_tile(pokemon_df):
     with st.expander(
         label=f'{pokemon_df["Head"].capitalize()}/{pokemon_df["Body"].capitalize()}',
+        expanded=True,
     ):
         # Display the Pokemon image
         display_sprite_with_fallback(
-            head_pokedex_number=pokemon_df['Head ID'],
-            body_pokedex_number=pokemon_df['Body ID'],
+            head_pokedex_number=int(pokemon_df['Head ID']),
+            body_pokedex_number=int(pokemon_df['Body ID']),
         )
 
         # Display the Pokemon details
@@ -56,22 +57,25 @@ def st_pokemon_tile(pokemon_df):
         st.dataframe(data=learnset_df, use_container_width=True, hide_index=True)
 
         # Display Evoline
-        st.markdown('**Upcoming Evolutions:**')
-
         evoline = pokemon_df['Evoline']
 
         # Filter so we only see upcoming evos
         filtered_evo_levels = {}
         other_evo_methods = {}
 
+        # Remove current forms
+        current_forms = [pokemon_df['Head'].capitalize(), pokemon_df['Body'].capitalize()]
+
         for key, value in evoline.items():
-            if isinstance(key, str):
-                other_evo_methods[key] = value
-            elif isinstance(key, int) and key > 90:
-                # This is to account for happiness scores
-                other_evo_methods[key] = value
-            else:
-                filtered_evo_levels[key] = value
+            deduped_evos = [i for i in value if i not in current_forms]
+            if deduped_evos:
+                if isinstance(key, str):
+                    other_evo_methods[key] = deduped_evos
+                elif isinstance(key, int) and key > 90:
+                    # This is to account for happiness scores
+                    other_evo_methods[key] = deduped_evos
+                else:
+                    filtered_evo_levels[key] = deduped_evos
 
         # Filter so we only see upcoming moves
         filtered_evo_levels = {
@@ -81,33 +85,36 @@ def st_pokemon_tile(pokemon_df):
         }
 
         # Enumerate the dicts
-        if filtered_evo_levels:
-            enumerated_levels = [
-                (key, value) for key, value in filtered_evo_levels.items()
-            ]
+        if filtered_evo_levels or other_evo_methods:
+            st.markdown('**Upcoming Evolutions:**')
 
-            # Create a DataFrame from the list
-            evoline_df = pd.DataFrame(enumerated_levels, columns=['Level', 'Evolution'])
+            if filtered_evo_levels:
+                enumerated_levels = [
+                    (key, value) for key, value in filtered_evo_levels.items()
+                ]
 
-            # Sort by level
-            evoline_df = evoline_df.sort_values(by='Level', ascending=True)
+                # Create a DataFrame from the list
+                evoline_df = pd.DataFrame(enumerated_levels, columns=['Level', 'Evolution'])
 
-            # Display both
-            st.dataframe(data=evoline_df, use_container_width=True, hide_index=True)
+                # Sort by level
+                evoline_df = evoline_df.sort_values(by='Level', ascending=True)
 
-        if other_evo_methods:
-            enumerated_methods = [
-                (key, value) for key, value in other_evo_methods.items()
-            ]
-            other_method_df = pd.DataFrame(
-                enumerated_methods,
-                columns=['Item/Happiness', 'Evolution'],
-            )
-            st.dataframe(
-                data=other_method_df,
-                use_container_width=True,
-                hide_index=True,
-            )
+                # Display both!
+                st.dataframe(data=evoline_df, use_container_width=True, hide_index=True)
+
+            if other_evo_methods:
+                enumerated_methods = [
+                    (key, value) for key, value in other_evo_methods.items()
+                ]
+                other_method_df = pd.DataFrame(
+                    enumerated_methods,
+                    columns=['Item/Happiness', 'Evolution'],
+                )
+                st.dataframe(
+                    data=other_method_df,
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
         # Display move set selector
         unpacked_moves = [
@@ -116,9 +123,11 @@ def st_pokemon_tile(pokemon_df):
             if isinstance(sublist, list)
             for move in sublist
         ]
+
+        unpacked_moves.sort()
         st.multiselect(
             label='Moveset',
-            options=unpacked_moves,
+            options=set(unpacked_moves),
             max_selections=4,
             key=f'{pokemon_df["ID"]}_move_select',
         )
