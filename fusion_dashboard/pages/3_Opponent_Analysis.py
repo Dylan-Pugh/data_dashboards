@@ -32,7 +32,7 @@ def display_opponent_analysis(df, opponent_level):
         st.header(f'Type: {type_string}')
         st.header(f'BST: {BST}')
     with col2:
-        display_functions.display_sprite_with_fallback(df.iloc[0]['Head ID'], df.loc[0]['Body ID'])
+        display_functions.display_sprite_with_fallback(int(df.iloc[0]['Head ID']), int(df.loc[0]['Body ID']))
     with col3:
         st.empty()
 
@@ -41,7 +41,7 @@ def display_opponent_analysis(df, opponent_level):
     st.plotly_chart(stats_bar, use_container_width=True)
 
     # Show weaknesses chart
-    weak_chart = display_functions.build_type_relationship_chart(df)
+    weak_chart = display_functions.build_type_relationship_chart(df[df['ID'] != 0].copy())
     st.plotly_chart(weak_chart, use_container_width=True)
 
     # Handle learnsets
@@ -76,10 +76,10 @@ if st.session_state['current_opponent'] is not None:
     # Initialize with current data, if it exists
     current_opponent = st.session_state['current_opponent']
 
-    default_heads = current_opponent['Head'].tolist()
+    default_heads = [value for value in current_opponent['Head'].tolist() if isinstance(value, str)]
     default_heads = [head.capitalize() for head in default_heads]
 
-    default_bodies = current_opponent['Body'].tolist()
+    default_bodies = [value for value in current_opponent['Body'].tolist() if isinstance(value, str)]
     default_bodies = [body.capitalize() for body in default_bodies]
 
 head_options = df['NAME'].to_list()
