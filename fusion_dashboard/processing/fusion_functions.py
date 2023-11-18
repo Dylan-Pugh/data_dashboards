@@ -266,6 +266,9 @@ def get_evolution_levels(pokemon_name):
 
 @st.cache_data
 def get_pokemon_info(pokemon_name):
+    # Account for form differences here, move to constant in the future
+    if pokemon_name == 'aegislash':
+        pokemon_name = 'aegislash-blade'
     url = f'https://pokeapi.co/api/v2/pokemon/{pokemon_name}'
     response = requests.get(url)
     if response.status_code == 200:
